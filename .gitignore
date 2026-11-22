@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+# Ne jamais versionner de clés mesh ni de fichiers de configuration personnels
+mesh/
+*.secret
+secrets.yaml
