@@ -2,7 +2,7 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.1.0, expérimental.** Les commandes envoyées par l'intégration ont été validées visuellement sur une Candle DIM avec le script de référence du dépôt [nordlux-phy-ota](https://github.com/ludovicalchi/nordlux-phy-ota) : marche/arrêt, luminosité, cycles. L'intégration Home Assistant elle-même n'a pas encore été testée en conditions réelles.
+> **Statut : 0.1.0.** Testée le 22/11/2026 dans Home Assistant 2026.11 (Container), via un ESP32 proxy Bluetooth ESPHome, sur une Candle DIM (`nx00626222`, firmware 27.3) : **extinction, rallumage et luminosité validés visuellement**. Les commandes reprennent celles du script de référence du dépôt [nordlux-phy-ota](https://github.com/ludovicalchi/nordlux-phy-ota). Un seul modèle d'ampoule a été testé à ce jour.
 
 ## Fonctionnalités
 
