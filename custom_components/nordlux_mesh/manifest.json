@@ -1,0 +1,13 @@
+{
+  "domain": "nordlux_mesh",
+  "name": "Nordlux Smart (Bluetooth Mesh local)",
+  "codeowners": ["@ludovicalchi"],
+  "config_flow": true,
+  "dependencies": ["bluetooth_adapters"],
+  "documentation": "https://github.com/ludovicalchi/ha-nordlux-mesh",
+  "integration_type": "hub",
+  "iot_class": "assumed_state",
+  "issue_tracker": "https://github.com/ludovicalchi/ha-nordlux-mesh/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

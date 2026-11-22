@@ -1,0 +1,46 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nordlux Smart mesh network",
+        "description": "Keys of the Bluetooth Mesh network (from tools/nordlux_mesh_keys.py), BLE proxies to connect to, and lights to control.",
+        "data": {
+          "name": "Name",
+          "netkey": "NetKey (32 hex characters)",
+          "appkey": "AppKey (32 hex characters)",
+          "iv_index": "IV index",
+          "source_address": "Source address of Home Assistant (unused unicast, e.g. 0x7F10)",
+          "proxies": "BLE MAC addresses of mesh proxies, comma separated (bridge first)",
+          "devices": "Lights, one per line: Name = 0x2005"
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "Expected 32 hexadecimal characters.",
+      "invalid_source": "Expected a unicast address between 0x0001 and 0x7FFF.",
+      "invalid_proxies": "Expected MAC addresses like AA:BB:CC:DD:EE:FF, comma separated.",
+      "invalid_devices": "Expected one line per light: Name = 0x2005 (unique unicast addresses).",
+      "invalid_iv_index": "Expected a positive integer."
+    },
+    "abort": {
+      "already_configured": "This mesh network is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Nordlux Smart mesh network",
+        "data": {
+          "iv_index": "IV index",
+          "proxies": "BLE MAC addresses of mesh proxies, comma separated (bridge first)",
+          "devices": "Lights, one per line: Name = 0x2005"
+        }
+      }
+    },
+    "error": {
+      "invalid_proxies": "Expected MAC addresses like AA:BB:CC:DD:EE:FF, comma separated.",
+      "invalid_devices": "Expected one line per light: Name = 0x2005 (unique unicast addresses).",
+      "invalid_iv_index": "Expected a positive integer."
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Réseau mesh Nordlux Smart",
+        "description": "Clés du réseau Bluetooth Mesh (obtenues avec tools/nordlux_mesh_keys.py), proxys BLE auxquels se connecter, et ampoules à piloter.",
+        "data": {
+          "name": "Nom",
+          "netkey": "NetKey (32 caractères hexadécimaux)",
+          "appkey": "AppKey (32 caractères hexadécimaux)",
+          "iv_index": "IV index",
+          "source_address": "Adresse source de Home Assistant (unicast inutilisée, ex. 0x7F10)",
+          "proxies": "Adresses MAC BLE des proxys mesh, séparées par des virgules (bridge en premier)",
+          "devices": "Ampoules, une par ligne : Nom = 0x2005"
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "32 caractères hexadécimaux attendus.",
+      "invalid_source": "Adresse unicast attendue, entre 0x0001 et 0x7FFF.",
+      "invalid_proxies": "Adresses MAC attendues, du type AA:BB:CC:DD:EE:FF, séparées par des virgules.",
+      "invalid_devices": "Une ligne par ampoule attendue : Nom = 0x2005 (adresses unicast uniques).",
+      "invalid_iv_index": "Entier positif attendu."
+    },
+    "abort": {
+      "already_configured": "Ce réseau mesh est déjà configuré."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Réseau mesh Nordlux Smart",
+        "data": {
+          "iv_index": "IV index",
+          "proxies": "Adresses MAC BLE des proxys mesh, séparées par des virgules (bridge en premier)",
+          "devices": "Ampoules, une par ligne : Nom = 0x2005"
+        }
+      }
+    },
+    "error": {
+      "invalid_proxies": "Adresses MAC attendues, du type AA:BB:CC:DD:EE:FF, séparées par des virgules.",
+      "invalid_devices": "Une ligne par ampoule attendue : Nom = 0x2005 (adresses unicast uniques).",
+      "invalid_iv_index": "Entier positif attendu."
+    }
+  }
+}
