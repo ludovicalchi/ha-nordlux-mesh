@@ -3,6 +3,41 @@
     "step": {
       "user": {
         "title": "Nordlux Smart mesh network",
+        "description": "How do you want to configure the mesh network?",
+        "menu_options": {
+          "cloud": "From my Nordlux account (keys and lights fetched automatically)",
+          "manual": "Manual entry of the keys and lights"
+        }
+      },
+      "cloud": {
+        "title": "Nordlux account",
+        "description": "The account is only used once, to read the network keys and the list of lights (read-only). The password is not stored. The two API keys of the Nordlux app are explained in the integration README.",
+        "data": {
+          "email": "Email of the Nordlux account",
+          "password": "Password",
+          "access_key_id": "API access key id (32 characters)",
+          "secret_key": "API secret key (16 characters)"
+        }
+      },
+      "house": {
+        "title": "Nordlux home",
+        "description": "Several homes were found on this account. Choose the one to add.",
+        "data": {
+          "house": "Home"
+        }
+      },
+      "cloud_confirm": {
+        "title": "Home « {house} »",
+        "description": "Network keys fetched, {count} light(s) found. Check the BLE proxies (tried in order) and the lights, then confirm.",
+        "data": {
+          "name": "Name",
+          "source_address": "Source address of Home Assistant (unused unicast, e.g. 0x7F10)",
+          "proxies": "BLE MAC addresses of mesh proxies, comma separated (bridge first)",
+          "devices": "Lights, one per line: Name = 0x2005"
+        }
+      },
+      "manual": {
+        "title": "Nordlux Smart mesh network",
         "description": "Keys of the Bluetooth Mesh network (from tools/nordlux_mesh_keys.py), BLE proxies to connect to, and lights to control.",
         "data": {
           "name": "Name",
@@ -20,16 +55,47 @@
       "invalid_source": "Expected a unicast address between 0x0001 and 0x7FFF.",
       "invalid_proxies": "Expected MAC addresses like AA:BB:CC:DD:EE:FF, comma separated.",
       "invalid_devices": "Expected one line per light: Name = 0x2005 (unique unicast addresses).",
-      "invalid_iv_index": "Expected a positive integer."
+      "invalid_iv_index": "Expected a positive integer.",
+      "invalid_access_key_id": "Expected 32 characters.",
+      "invalid_secret_key": "Expected 16 characters.",
+      "invalid_auth": "Login refused: check the email, the password and the two API keys.",
+      "cannot_connect": "The Nordlux cloud could not be reached or returned an unexpected answer.",
+      "no_lights": "No light with a mesh address was found on this account."
     },
     "abort": {
-      "already_configured": "This mesh network is already configured."
+      "already_configured": "This mesh network is already configured. To add new lights, use the integration options."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Nordlux Smart mesh network",
+        "menu_options": {
+          "cloud": "Update from my Nordlux account (new lights)",
+          "settings": "Edit the proxies and lights manually"
+        }
+      },
+      "settings": {
+        "title": "Nordlux Smart mesh network",
+        "data": {
+          "iv_index": "IV index",
+          "proxies": "BLE MAC addresses of mesh proxies, comma separated (bridge first)",
+          "devices": "Lights, one per line: Name = 0x2005"
+        }
+      },
+      "cloud": {
+        "title": "Nordlux account",
+        "description": "Read-only access to the account, to fetch the current list of lights. The password is not stored.",
+        "data": {
+          "email": "Email of the Nordlux account",
+          "password": "Password",
+          "access_key_id": "API access key id (32 characters)",
+          "secret_key": "API secret key (16 characters)"
+        }
+      },
+      "cloud_confirm": {
+        "title": "Home « {house} »",
+        "description": "{count} light(s) found on the account. Names already chosen are kept. Check the list, then confirm.",
         "data": {
           "iv_index": "IV index",
           "proxies": "BLE MAC addresses of mesh proxies, comma separated (bridge first)",
@@ -40,7 +106,13 @@
     "error": {
       "invalid_proxies": "Expected MAC addresses like AA:BB:CC:DD:EE:FF, comma separated.",
       "invalid_devices": "Expected one line per light: Name = 0x2005 (unique unicast addresses).",
-      "invalid_iv_index": "Expected a positive integer."
+      "invalid_iv_index": "Expected a positive integer.",
+      "invalid_access_key_id": "Expected 32 characters.",
+      "invalid_secret_key": "Expected 16 characters.",
+      "invalid_auth": "Login refused: check the email, the password and the two API keys.",
+      "cannot_connect": "The Nordlux cloud could not be reached or returned an unexpected answer.",
+      "no_lights": "No light with a mesh address was found on this account.",
+      "house_not_found": "This account has no home using the mesh network of this integration."
     }
   }
 }

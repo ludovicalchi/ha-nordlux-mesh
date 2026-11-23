@@ -3,6 +3,41 @@
     "step": {
       "user": {
         "title": "Réseau mesh Nordlux Smart",
+        "description": "Comment configurer le réseau mesh ?",
+        "menu_options": {
+          "cloud": "Depuis mon compte Nordlux (clés et ampoules récupérées automatiquement)",
+          "manual": "Saisie manuelle des clés et des ampoules"
+        }
+      },
+      "cloud": {
+        "title": "Compte Nordlux",
+        "description": "Le compte ne sert qu'une fois, en lecture seule, pour lire les clés du réseau et la liste des ampoules. Le mot de passe n'est pas enregistré. Les deux clés d'API de l'app Nordlux sont expliquées dans le README de l'intégration.",
+        "data": {
+          "email": "E-mail du compte Nordlux",
+          "password": "Mot de passe",
+          "access_key_id": "Clé d'API « access key id » (32 caractères)",
+          "secret_key": "Clé d'API « secret key » (16 caractères)"
+        }
+      },
+      "house": {
+        "title": "Maison Nordlux",
+        "description": "Plusieurs maisons sont associées à ce compte. Choisissez celle à ajouter.",
+        "data": {
+          "house": "Maison"
+        }
+      },
+      "cloud_confirm": {
+        "title": "Maison « {house} »",
+        "description": "Clés du réseau récupérées, {count} ampoule(s) trouvée(s). Vérifiez les proxys BLE (essayés dans l'ordre) et les ampoules, puis validez.",
+        "data": {
+          "name": "Nom",
+          "source_address": "Adresse source de Home Assistant (unicast inutilisée, ex. 0x7F10)",
+          "proxies": "Adresses MAC BLE des proxys mesh, séparées par des virgules (bridge en premier)",
+          "devices": "Ampoules, une par ligne : Nom = 0x2005"
+        }
+      },
+      "manual": {
+        "title": "Réseau mesh Nordlux Smart",
         "description": "Clés du réseau Bluetooth Mesh (obtenues avec tools/nordlux_mesh_keys.py), proxys BLE auxquels se connecter, et ampoules à piloter.",
         "data": {
           "name": "Nom",
@@ -20,16 +55,47 @@
       "invalid_source": "Adresse unicast attendue, entre 0x0001 et 0x7FFF.",
       "invalid_proxies": "Adresses MAC attendues, du type AA:BB:CC:DD:EE:FF, séparées par des virgules.",
       "invalid_devices": "Une ligne par ampoule attendue : Nom = 0x2005 (adresses unicast uniques).",
-      "invalid_iv_index": "Entier positif attendu."
+      "invalid_iv_index": "Entier positif attendu.",
+      "invalid_access_key_id": "32 caractères attendus.",
+      "invalid_secret_key": "16 caractères attendus.",
+      "invalid_auth": "Connexion refusée : vérifiez l'e-mail, le mot de passe et les deux clés d'API.",
+      "cannot_connect": "Le cloud Nordlux est injoignable ou a renvoyé une réponse inattendue.",
+      "no_lights": "Aucune ampoule avec une adresse mesh sur ce compte."
     },
     "abort": {
-      "already_configured": "Ce réseau mesh est déjà configuré."
+      "already_configured": "Ce réseau mesh est déjà configuré. Pour ajouter des ampoules, passez par les options de l'intégration."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Réseau mesh Nordlux Smart",
+        "menu_options": {
+          "cloud": "Mettre à jour depuis mon compte Nordlux (nouvelles ampoules)",
+          "settings": "Modifier les proxys et les ampoules à la main"
+        }
+      },
+      "settings": {
+        "title": "Réseau mesh Nordlux Smart",
+        "data": {
+          "iv_index": "IV index",
+          "proxies": "Adresses MAC BLE des proxys mesh, séparées par des virgules (bridge en premier)",
+          "devices": "Ampoules, une par ligne : Nom = 0x2005"
+        }
+      },
+      "cloud": {
+        "title": "Compte Nordlux",
+        "description": "Accès en lecture seule au compte, pour lire la liste actuelle des ampoules. Le mot de passe n'est pas enregistré.",
+        "data": {
+          "email": "E-mail du compte Nordlux",
+          "password": "Mot de passe",
+          "access_key_id": "Clé d'API « access key id » (32 caractères)",
+          "secret_key": "Clé d'API « secret key » (16 caractères)"
+        }
+      },
+      "cloud_confirm": {
+        "title": "Maison « {house} »",
+        "description": "{count} ampoule(s) trouvée(s) sur le compte. Les noms déjà choisis sont conservés. Vérifiez la liste, puis validez.",
         "data": {
           "iv_index": "IV index",
           "proxies": "Adresses MAC BLE des proxys mesh, séparées par des virgules (bridge en premier)",
@@ -40,7 +106,13 @@
     "error": {
       "invalid_proxies": "Adresses MAC attendues, du type AA:BB:CC:DD:EE:FF, séparées par des virgules.",
       "invalid_devices": "Une ligne par ampoule attendue : Nom = 0x2005 (adresses unicast uniques).",
-      "invalid_iv_index": "Entier positif attendu."
+      "invalid_iv_index": "Entier positif attendu.",
+      "invalid_access_key_id": "32 caractères attendus.",
+      "invalid_secret_key": "16 caractères attendus.",
+      "invalid_auth": "Connexion refusée : vérifiez l'e-mail, le mot de passe et les deux clés d'API.",
+      "cannot_connect": "Le cloud Nordlux est injoignable ou a renvoyé une réponse inattendue.",
+      "no_lights": "Aucune ampoule avec une adresse mesh sur ce compte.",
+      "house_not_found": "Aucune maison de ce compte n'utilise le réseau mesh de cette intégration."
     }
   }
 }
