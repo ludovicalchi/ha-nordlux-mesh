@@ -11,12 +11,10 @@
       },
       "cloud": {
         "title": "Nordlux account",
-        "description": "The account is only used once, to read the network keys and the list of lights (read-only). The password is not stored. The two API keys of the Nordlux app are explained in the integration README.",
+        "description": "The account is only used once, to read the network keys and the list of lights (read-only). The password is not stored.",
         "data": {
           "email": "Email of the Nordlux account",
-          "password": "Password",
-          "access_key_id": "API access key id (32 characters)",
-          "secret_key": "API secret key (16 characters)"
+          "password": "Password"
         }
       },
       "house": {
@@ -56,9 +54,7 @@
       "invalid_proxies": "Expected MAC addresses like AA:BB:CC:DD:EE:FF, comma separated.",
       "invalid_devices": "Expected one line per light: Name = 0x2005 (unique unicast addresses).",
       "invalid_iv_index": "Expected a positive integer.",
-      "invalid_access_key_id": "Expected 32 characters.",
-      "invalid_secret_key": "Expected 16 characters.",
-      "invalid_auth": "Login refused: check the email, the password and the two API keys.",
+      "invalid_auth": "Login refused: check the email and the password.",
       "cannot_connect": "The Nordlux cloud could not be reached or returned an unexpected answer.",
       "no_lights": "No light with a mesh address was found on this account."
     },
@@ -88,9 +84,7 @@
         "description": "Read-only access to the account, to fetch the current list of lights. The password is not stored.",
         "data": {
           "email": "Email of the Nordlux account",
-          "password": "Password",
-          "access_key_id": "API access key id (32 characters)",
-          "secret_key": "API secret key (16 characters)"
+          "password": "Password"
         }
       },
       "cloud_confirm": {
@@ -107,9 +101,7 @@
       "invalid_proxies": "Expected MAC addresses like AA:BB:CC:DD:EE:FF, comma separated.",
       "invalid_devices": "Expected one line per light: Name = 0x2005 (unique unicast addresses).",
       "invalid_iv_index": "Expected a positive integer.",
-      "invalid_access_key_id": "Expected 32 characters.",
-      "invalid_secret_key": "Expected 16 characters.",
-      "invalid_auth": "Login refused: check the email, the password and the two API keys.",
+      "invalid_auth": "Login refused: check the email and the password.",
       "cannot_connect": "The Nordlux cloud could not be reached or returned an unexpected answer.",
       "no_lights": "No light with a mesh address was found on this account.",
       "house_not_found": "This account has no home using the mesh network of this integration."

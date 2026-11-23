@@ -4,8 +4,9 @@ Utilisé une seule fois, par l'assistant de configuration : connexion, liste des
 clés du réseau, ampoules et proxys de chaque maison. Rien n'est modifié côté cloud, et ni le mot
 de passe ni le jeton de session ne sont conservés.
 
-Les clés applicatives de l'app (access key id, secret key) ne sont pas fournies ici : l'utilisateur
-les saisit (voir le README du dépôt nordlux-phy-ota).
+Les clés applicatives sont celles codées en dur dans l'app Android Nordlux v2.6.2
+(wifi/ykutils/SecurityUtil.java) : identiques pour tous les utilisateurs, elles ne donnent accès à
+aucun compte sans l'e-mail et le mot de passe.
 """
 from __future__ import annotations
 
@@ -23,6 +24,8 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 HOST = "https://api.yankon-xm.com/"
+ACCESS_KEY_ID = "d780d5f3c706851ad386e7d7acdaf6f7"
+SECRET_KEY = "df1acb570370615d"
 APP = {"appCode": "nordlux", "version": "v2.0.0", "appVersion": "v2.6.2", "buildVersion": 137,
        "mobileSystemType": "android", "mobileSystemVersion": "14",
        "mobileBrand": "generic", "mobileModel": "generic"}
@@ -80,13 +83,11 @@ def _fmt_mac(raw: str | None) -> str:
 
 
 class NordluxCloud:
-    def __init__(self, session: aiohttp.ClientSession, access_key_id: str, secret_key: str,
+    def __init__(self, session: aiohttp.ClientSession,
                  clock: Callable[[], datetime.datetime] = datetime.datetime.now) -> None:
-        if len(access_key_id) != 32 or len(secret_key) != 16:
-            raise CloudAuthError("clés applicatives invalides (32 et 16 caractères attendus)")
         self._session = session
-        self._akid = access_key_id
-        self._sk = secret_key.encode()
+        self._akid = ACCESS_KEY_ID
+        self._sk = SECRET_KEY.encode()
         # L'app signe avec l'heure locale du téléphone : Home Assistant passe son propre fuseau.
         self._clock = clock
         self._auth: dict[str, Any] | None = None

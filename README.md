@@ -2,7 +2,9 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.2.0**, qui ajoute la configuration depuis le compte Nordlux. Testée le 23/11/2026 dans Home Assistant 2026.11, sur un vrai compte à une seule maison : la mise à jour depuis le compte (options de l'intégration) a retrouvé les clés, l'ampoule et les proxys, et l'ampoule répond toujours ensuite. L'ajout initial depuis le compte utilise la même lecture, mais n'a pas été déroulé de bout en bout.
+> **Statut : 0.3.0** : l'assistant ne demande plus que l'e-mail et le mot de passe, car les clés d'API de l'app sont intégrées. La lecture du compte avec ces clés a été vérifiée depuis un PC.
+>
+> **0.2.0** : ajout de la configuration depuis le compte Nordlux. Testée le 23/11/2026 dans Home Assistant 2026.11, sur un vrai compte à une seule maison : la mise à jour depuis le compte (options de l'intégration) a retrouvé les clés, l'ampoule et les proxys, et l'ampoule répond toujours ensuite. L'ajout initial depuis le compte utilise la même lecture, mais n'a pas été déroulé de bout en bout.
 >
 > **0.1.0** : testée le 22/11/2026 dans Home Assistant 2026.11 (Container), via un ESP32 proxy Bluetooth ESPHome, sur une Candle DIM (`nx00626222`, firmware 27.3) : **extinction, rallumage et luminosité validés visuellement**. Les commandes reprennent celles du script de référence du dépôt [nordlux-phy-ota](https://github.com/ludovicalchi/nordlux-phy-ota). Un seul modèle d'ampoule a été testé à ce jour.
 
@@ -51,7 +53,7 @@ Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, 
      bluetooth_proxy:
        active: true   # indispensable : l'intégration ouvre une connexion GATT
      ```
-3. **Pour la configuration depuis le compte Nordlux** (recommandée) : l'e-mail et le mot de passe du compte, et les deux **clés d'API de l'app Nordlux** (`accessKeyId`, 32 caractères, et `secretKey`, 16 caractères). Ces clés sont codées en dur dans l'app et ne sont pas reproduites ici : la section [« Clés de l'API »](https://github.com/ludovicalchi/nordlux-phy-ota#clés-de-lapi) du dépôt nordlux-phy-ota explique comment les retrouver.
+3. **Pour la configuration depuis le compte Nordlux** (recommandée) : l'e-mail et le mot de passe du compte, c'est tout. Les ampoules doivent d'abord avoir été ajoutées dans l'app Nordlux.
 4. **Pour la saisie manuelle** : les clés du réseau mesh et les adresses des ampoules. Les outils du dépôt [nordlux-phy-ota](https://github.com/ludovicalchi/nordlux-phy-ota) les récupèrent depuis votre propre compte Nordlux :
    - `tools/nordlux_mesh_keys.py` donne la NetKey, l'AppKey, l'IV index et l'adresse unicast de chaque ampoule ;
    - `tools/mesh_find_node.py` retrouve l'adresse d'une ampoule par radio, par exemple si elle a été supprimée de l'app sans avoir été réinitialisée.
@@ -70,12 +72,14 @@ L'installation manuelle reste possible : copiez `custom_components/nordlux_mesh/
 
 ### Depuis le compte Nordlux
 
-1. Saisissez l'e-mail, le mot de passe et les deux clés d'API.
+1. Saisissez l'e-mail et le mot de passe du compte.
 2. L'assistant se connecte au cloud **en lecture seule**. Il récupère la NetKey, l'AppKey, l'IV index, les ampoules (nom et adresse unicast) et les nœuds proxy : le bridge d'abord, puis les ampoules.
 3. Si le compte a plusieurs maisons, choisissez-en une.
 4. Vérifiez la liste des proxys et des ampoules, modifiable, puis validez.
 
-Le mot de passe et les clés d'API ne sont **pas enregistrés** : seules les clés du réseau mesh, les proxys et les ampoules sont conservés. Après la configuration, l'intégration n'utilise plus du tout le cloud.
+Le mot de passe n'est **pas enregistré** : seules les clés du réseau mesh, les proxys et les ampoules sont conservés. Après la configuration, l'intégration n'utilise plus du tout le cloud.
+
+Pour dialoguer avec le cloud, l'intégration utilise les clés d'API codées en dur dans l'app Android Nordlux (v2.6.2). Ces clés sont les mêmes pour tous les utilisateurs et ne donnent accès à aucun compte sans son e-mail et son mot de passe. Si une future version de l'app en change, l'assistant cessera de fonctionner jusqu'à une mise à jour de l'intégration. La saisie manuelle restera alors possible.
 
 **Nouvelle ampoule** : ajoutez-la d'abord dans l'app Nordlux. Ensuite, dans l'intégration, ouvrez **Configurer → Mettre à jour depuis mon compte Nordlux**. Les noms déjà choisis sont conservés.
 

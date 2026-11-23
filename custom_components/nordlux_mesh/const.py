@@ -7,9 +7,7 @@ CONF_IV_INDEX = "iv_index"
 CONF_SRC = "source_address"
 CONF_PROXIES = "proxies"
 CONF_DEVICES = "devices"
-# Assistant « compte Nordlux » : utilisés le temps de la configuration, jamais enregistrés.
-CONF_ACCESS_KEY_ID = "access_key_id"
-CONF_SECRET_KEY = "secret_key"
+# Assistant « compte Nordlux » : choix de la maison (l'e-mail et le mot de passe ne sont jamais enregistrés).
 CONF_HOUSE = "house"
 
 # Adresse source propre à Home Assistant (le script PC utilise 0x7F01) : chaque émetteur

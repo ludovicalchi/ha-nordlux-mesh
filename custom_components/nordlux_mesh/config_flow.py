@@ -19,8 +19,8 @@ from homeassistant.helpers.selector import (
 
 from .cloud import CloudAuthError, CloudError, CloudHouse, NordluxCloud
 from .const import (
-    CONF_ACCESS_KEY_ID, CONF_APPKEY, CONF_DEVICES, CONF_HOUSE, CONF_IV_INDEX, CONF_NETKEY, CONF_PROXIES,
-    CONF_SECRET_KEY, CONF_SRC, DEFAULT_SRC, DOMAIN,
+    CONF_APPKEY, CONF_DEVICES, CONF_HOUSE, CONF_IV_INDEX, CONF_NETKEY, CONF_PROXIES, CONF_SRC, DEFAULT_SRC,
+    DOMAIN,
 )
 from .hub import parse_devices
 from .mesh import k3
@@ -80,24 +80,14 @@ def _cloud_schema(defaults: dict[str, Any]) -> vol.Schema:
     return vol.Schema({
         vol.Required(CONF_EMAIL, default=defaults.get(CONF_EMAIL, "")): _EMAIL,
         vol.Required(CONF_PASSWORD): _PASSWORD,
-        vol.Required(CONF_ACCESS_KEY_ID, default=defaults.get(CONF_ACCESS_KEY_ID, "")): str,
-        vol.Required(CONF_SECRET_KEY): _PASSWORD,
     })
 
 
 async def _fetch_houses(hass: HomeAssistant, user_input: dict[str, Any],
                         errors: dict[str, str]) -> list[CloudHouse]:
     """Connexion au compte et lecture des maisons ; renseigne `errors` en cas d'échec."""
-    akid = user_input[CONF_ACCESS_KEY_ID].strip()
-    sk = user_input[CONF_SECRET_KEY].strip()
-    if len(akid) != 32:
-        errors[CONF_ACCESS_KEY_ID] = "invalid_access_key_id"
-    if len(sk) != 16:
-        errors[CONF_SECRET_KEY] = "invalid_secret_key"
-    if errors:
-        return []
     try:
-        api = NordluxCloud(async_get_clientsession(hass), akid, sk, clock=dt_util.now)
+        api = NordluxCloud(async_get_clientsession(hass), clock=dt_util.now)
         await api.login(user_input[CONF_EMAIL].strip(), user_input[CONF_PASSWORD])
         houses = await api.houses()
     except CloudAuthError as err:
