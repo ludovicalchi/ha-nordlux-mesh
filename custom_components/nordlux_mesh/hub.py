@@ -124,7 +124,8 @@ class NordluxMeshHub:
                         raise
                     except Exception as err:  # noqa: BLE001 - lien BLE perdu, on reconnecte une fois
                         _LOGGER.debug("Commande mesh en échec (essai %d) : %s", attempt, err)
-                        await self.link.close()
+                        # Cache GATT vidé : l'essai suivant redécouvre les services (handles modifiés).
+                        await self.link.close(clear_cache=True)
                         if attempt == 2:
                             raise HomeAssistantError(f"Échec de la commande Nordlux : {err}") from err
             finally:

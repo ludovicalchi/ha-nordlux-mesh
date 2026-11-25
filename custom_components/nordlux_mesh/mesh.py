@@ -201,20 +201,29 @@ class ProxyLink:
             await self._write(self.net.proxy_cfg_pdu(b"\x01" + b"".join(a.to_bytes(2, "big") for a in addrs)))
             await self._drain(0.5)
         except Exception:
+            # Échec dès l'ouverture : souvent un cache GATT périmé (l'ampoule peut réorganiser ses
+            # handles, par ex. Mesh Proxy passé de 0x42 à 0xF1) -> on oublie le cache.
             self._client = None
-            try:
-                await client.disconnect()
-            except Exception:  # noqa: BLE001
-                pass
+            await self._release(client, clear_cache=True)
             raise
 
-    async def close(self) -> None:
+    async def close(self, clear_cache: bool = False) -> None:
+        """Ferme la connexion ; `clear_cache` force une nouvelle découverte des services la prochaine fois."""
         client, self._client = self._client, None
         if client is not None:
+            await self._release(client, clear_cache)
+
+    @staticmethod
+    async def _release(client, clear_cache: bool) -> None:
+        if clear_cache and hasattr(client, "clear_cache"):
             try:
-                await client.disconnect()
+                await client.clear_cache()
             except Exception:  # noqa: BLE001
                 pass
+        try:
+            await client.disconnect()
+        except Exception:  # noqa: BLE001
+            pass
 
     async def _write(self, pdu: bytes) -> None:
         await self._client.write_gatt_char(PROXY_IN, pdu, response=False)
