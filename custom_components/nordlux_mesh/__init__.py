@@ -6,10 +6,11 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 
 from .const import CONF_DEVICES, DOMAIN
-from .hub import NordluxMeshHub, entry_value, parse_devices
+from .hub import NordluxMeshHub, async_remove_light, entry_value, parse_devices
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.LIGHT]
@@ -48,8 +49,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> b
 
 async def async_remove_config_entry_device(hass: HomeAssistant, entry: NordluxConfigEntry,
                                            device: dr.DeviceEntry) -> bool:
-    """Bouton « Supprimer » : autorisé seulement pour une ampoule qui n'est plus dans la liste."""
-    return _is_stale(entry, device)
+    """Bouton « Supprimer » de l'appareil : comme Configurer → Supprimer une ampoule (avec réinitialisation).
+
+    Appareil orphelin : supprimé directement. Ampoule configurée : réinitialisée à distance puis retirée
+    de la liste ; si la réinitialisation échoue, la suppression est refusée avec un message."""
+    if _is_stale(entry, device):
+        return True
+    prefix = f"{entry.entry_id}_"
+    unicast = next((int(ident[len(prefix):], 16) for domain, ident in device.identifiers
+                    if domain == DOMAIN and ident.startswith(prefix)), None)
+    if unicast is None:
+        return False
+    try:
+        new_options = await async_remove_light(hass, entry, unicast, reset=True)
+    except Exception as err:
+        raise HomeAssistantError(
+            f"Réinitialisation de l'ampoule 0x{unicast:04X} impossible ({err}). Pour la retirer sans la "
+            "réinitialiser : Configurer → Supprimer une ampoule, case « Réinitialiser » décochée."
+        ) from err
+    _LOGGER.info("Ampoule 0x%04X réinitialisée et retirée de la liste", unicast)
+    hass.config_entries.async_update_entry(entry, options=new_options)  # rechargement par l'écouteur
+    return True
 
 
 async def _async_reload(hass: HomeAssistant, entry: NordluxConfigEntry) -> None:

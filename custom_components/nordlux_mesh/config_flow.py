@@ -25,7 +25,7 @@ from .const import (
     CONF_APPKEY, CONF_DEVICES, CONF_HOUSE, CONF_IV_INDEX, CONF_NETKEY, CONF_PROXIES, CONF_SRC, DEFAULT_SRC,
     DOMAIN,
 )
-from .hub import parse_devices
+from .hub import async_remove_light, parse_devices
 from .mesh import k3
 from .nxadd import NX_COMPANY, NX_WRITE, next_free_address, nx_config_messages, parse_nx_mfr
 
@@ -34,15 +34,6 @@ CONF_MAC = "mac"
 CONF_LIGHT = "light"
 CONF_RESET = "reset"
 VERIFY_TIMEOUT_S = 45
-
-
-def _mac_of_unicast(hass: HomeAssistant, unicast: int) -> str | None:
-    """Adresse BLE de l'ampoule qui annonce (données 0x6E78) cette adresse unicast, si elle est visible."""
-    for si in bluetooth.async_discovered_service_info(hass, connectable=False):
-        info = parse_nx_mfr(si.manufacturer_data.get(NX_COMPANY))
-        if info and info["configured"] and info["addr"] == unicast:
-            return si.address.upper()
-    return None
 
 
 class NxAddError(Exception):
@@ -319,23 +310,14 @@ class NordluxMeshOptionsFlow(OptionsFlow):
         errors: dict[str, str] = {}
         if user_input is not None:
             unicast = int(user_input[CONF_LIGHT], 0)
-            mac = _mac_of_unicast(self.hass, unicast)
-            if user_input.get(CONF_RESET, True):
-                try:
-                    await self.config_entry.runtime_data.run(lambda link: link.nx_reset(unicast))
-                except Exception as err:  # noqa: BLE001
-                    _LOGGER.warning("Réinitialisation de 0x%04X impossible : %s", unicast, err)
-                    errors["base"] = "reset_failed"
-            if not errors:
-                proxies = [m.strip() for m in cur.get(CONF_PROXIES, "").split(",") if m.strip()]
-                # Une ampoule réinitialisée reste un proxy, mais d'un autre réseau : on la retire des proxys.
-                if mac and mac in proxies and len(proxies) > 1:
-                    proxies.remove(mac)
-                return self.async_create_entry(data={
-                    CONF_IV_INDEX: cur.get(CONF_IV_INDEX, 0),
-                    CONF_PROXIES: ", ".join(proxies),
-                    CONF_DEVICES: "\n".join(f"{n} = 0x{u:04X}" for n, u in devices if u != unicast),
-                })
+            try:
+                new_options = await async_remove_light(self.hass, self.config_entry, unicast,
+                                                       reset=user_input.get(CONF_RESET, True))
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.warning("Réinitialisation de 0x%04X impossible : %s", unicast, err)
+                errors["base"] = "reset_failed"
+            else:
+                return self.async_create_entry(data=new_options)
         options = [SelectOptionDict(value=f"0x{u:04X}", label=f"{n} (0x{u:04X})") for n, u in devices]
         schema = vol.Schema({
             vol.Required(CONF_LIGHT, default=(user_input or {}).get(CONF_LIGHT, options[0]["value"])):

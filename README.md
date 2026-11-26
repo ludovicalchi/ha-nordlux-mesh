@@ -120,6 +120,8 @@ Si « Réinitialiser l'ampoule » est coché, l'intégration lui envoie d'abord,
 
 L'ampoule est ensuite retirée de la liste, et de celle des proxys si elle est identifiée. Son appareil disparaît au rechargement.
 
+Le bouton **Supprimer** standard de l'appareil (⋮ sur la page de l'appareil) fait la même chose, réinitialisation comprise. Si elle échoue, par exemple parce qu'aucun proxy n'est joignable, la suppression est refusée et un message l'explique. Utilisez alors le choix des options en décochant « Réinitialiser l'ampoule ».
+
 Une ampoule ajoutée sans l'app **n'apparaît pas dans l'app Nordlux**. Le cloud la garde à son ancienne adresse si elle y était. N'utilisez donc pas « Mettre à jour depuis mon compte » pour elle : il proposerait cette ancienne adresse. Pour la rendre à l'app, réinitialisez-la, puis ajoutez-la normalement depuis l'app.
 
 ### Saisie manuelle

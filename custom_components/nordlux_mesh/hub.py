@@ -16,10 +16,11 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 
 from .const import (
-    CONF_APPKEY, CONF_IV_INDEX, CONF_NETKEY, CONF_PROXIES, CONF_SRC, DOMAIN,
+    CONF_APPKEY, CONF_DEVICES, CONF_IV_INDEX, CONF_NETKEY, CONF_PROXIES, CONF_SRC, DOMAIN,
     IDLE_DISCONNECT_S, SEQ_BLOCK, STORAGE_VERSION,
 )
 from .mesh import PROXY_SERVICE, MeshNetwork, ProxyLink
+from .nxadd import NX_COMPANY, parse_nx_mfr
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +47,34 @@ def parse_devices(text: str) -> list[tuple[str, int]]:
 def entry_value(entry: ConfigEntry, key: str, default: Any = None) -> Any:
     """Les options (modifiables après coup) priment sur les données initiales."""
     return entry.options.get(key, entry.data.get(key, default))
+
+
+def mac_of_unicast(hass: HomeAssistant, unicast: int) -> str | None:
+    """Adresse BLE de l'ampoule qui annonce (données 0x6E78) cette adresse unicast, si elle est visible."""
+    for si in bluetooth.async_discovered_service_info(hass, connectable=False):
+        info = parse_nx_mfr(si.manufacturer_data.get(NX_COMPANY))
+        if info and info["configured"] and info["addr"] == unicast:
+            return si.address.upper()
+    return None
+
+
+async def async_remove_light(hass: HomeAssistant, entry: ConfigEntry, unicast: int, reset: bool) -> dict[str, Any]:
+    """Réinitialise l'ampoule (si demandé) et renvoie les nouvelles options sans elle.
+
+    Lève une exception si la réinitialisation échoue : rien n'est alors modifié."""
+    mac = mac_of_unicast(hass, unicast)
+    if reset:
+        await entry.runtime_data.run(lambda link: link.nx_reset(unicast))
+    devices = parse_devices(entry_value(entry, CONF_DEVICES, ""))
+    proxies = [m.strip() for m in entry_value(entry, CONF_PROXIES, "").split(",") if m.strip()]
+    # Une ampoule réinitialisée reste un proxy, mais d'un autre réseau : on la retire des proxys.
+    if mac and mac in proxies and len(proxies) > 1:
+        proxies.remove(mac)
+    return {
+        CONF_IV_INDEX: entry_value(entry, CONF_IV_INDEX, 0),
+        CONF_PROXIES: ", ".join(proxies),
+        CONF_DEVICES: "\n".join(f"{n} = 0x{u:04X}" for n, u in devices if u != unicast),
+    }
 
 
 class NordluxMeshHub:
