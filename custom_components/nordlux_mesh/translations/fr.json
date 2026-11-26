@@ -68,6 +68,7 @@
         "title": "Réseau mesh Nordlux Smart",
         "menu_options": {
           "add_light": "Ajouter une ampoule Nordlux réinitialisée (sans l'app)",
+          "remove_light": "Supprimer une ampoule (et la réinitialiser)",
           "cloud": "Mettre à jour depuis mon compte Nordlux (nouvelles ampoules)",
           "settings": "Modifier les proxys et les ampoules à la main"
         }
@@ -104,6 +105,14 @@
           "mac": "Ampoule",
           "name": "Nom"
         }
+      },
+      "remove_light": {
+        "title": "Supprimer une ampoule",
+        "description": "L'ampoule est retirée de la liste et son appareil disparaît. Si « Réinitialiser l'ampoule » est coché, elle reçoit d'abord la réinitialisation à distance de l'app Nordlux : elle clignote, quitte le réseau et peut être ajoutée à nouveau (ici ou dans l'app).",
+        "data": {
+          "light": "Ampoule",
+          "reset": "Réinitialiser l'ampoule"
+        }
       }
     },
     "error": {
@@ -115,14 +124,16 @@
       "no_lights": "Aucune ampoule avec une adresse mesh sur ce compte.",
       "house_not_found": "Aucune maison de ce compte n'utilise le réseau mesh de cette intégration.",
       "no_reset_lights": "Aucune ampoule Nordlux réinitialisée trouvée. Réinitialisez-la, gardez-la près d'un proxy Bluetooth, puis validez pour relancer la recherche.",
-      "light_gone": "Cette ampoule n'est plus visible : validez pour relancer la recherche."
+      "light_gone": "Cette ampoule n'est plus visible : validez pour relancer la recherche.",
+      "reset_failed": "Le message de réinitialisation n'a pas pu être envoyé (aucun proxy joignable ?). Décochez « Réinitialiser l'ampoule » pour la retirer quand même de la liste."
     },
     "progress": {
       "adding_light": "Envoi des clés du réseau à « {name} » (adresse {address}), puis attente de sa confirmation. Cela peut prendre jusqu'à une minute."
     },
     "abort": {
       "add_failed": "L'ampoule n'a pas pu être ajoutée : {error}",
-      "no_free_address": "Plus d'adresse libre dans 0x7E00–0x7EFF."
+      "no_free_address": "Plus d'adresse libre dans 0x7E00–0x7EFF.",
+      "no_lights_configured": "Aucune ampoule n'est configurée."
     }
   }
 }

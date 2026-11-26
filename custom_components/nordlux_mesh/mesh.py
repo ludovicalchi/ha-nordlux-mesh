@@ -29,6 +29,8 @@ OP_CTL_STATUS = b"\x82\x60"
 
 NX_TEMP_ON = 10000
 NX_TEMP_OFF = 15000
+# Opcode vendeur 0xE1, société 0x1111 (modèle 0x3333), données 0A 00 = réinitialisation
+NX_RESET_ACCESS = bytes([0xE1, 0x11, 0x11, 0x0A, 0x00])
 
 
 # ------------------------------------------------------------------ crypto
@@ -277,6 +279,13 @@ class ProxyLink:
         temp = 800 + max(0, min(100, int(cct_pct)))
         return await self.send(dst, nx_ctl_access(pct, temp, transition_byte(transition_ms), self.next_tid()),
                                OP_CTL_STATUS)
+
+    async def nx_reset(self, dst: int, repeat: int = 2) -> None:
+        """Réinitialisation à distance (suppression dans l'app, firmware ≥ 18) : message vendeur sans réponse.
+        Testé le 26/11/2026 : l'ampoule clignote et revient en « clés non configurées »."""
+        for _ in range(repeat):
+            await self.send(dst, NX_RESET_ACCESS)
+            await asyncio.sleep(0.3)
 
     async def ctl_get(self, dst: int) -> bytes | None:
         """Lecture (sans effet sur la lumière) : utile pour vérifier la liaison."""

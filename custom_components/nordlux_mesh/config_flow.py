@@ -31,7 +31,18 @@ from .nxadd import NX_COMPANY, NX_WRITE, next_free_address, nx_config_messages, 
 
 _LOGGER = logging.getLogger(__name__)
 CONF_MAC = "mac"
+CONF_LIGHT = "light"
+CONF_RESET = "reset"
 VERIFY_TIMEOUT_S = 45
+
+
+def _mac_of_unicast(hass: HomeAssistant, unicast: int) -> str | None:
+    """Adresse BLE de l'ampoule qui annonce (données 0x6E78) cette adresse unicast, si elle est visible."""
+    for si in bluetooth.async_discovered_service_info(hass, connectable=False):
+        info = parse_nx_mfr(si.manufacturer_data.get(NX_COMPANY))
+        if info and info["configured"] and info["addr"] == unicast:
+            return si.address.upper()
+    return None
 
 
 class NxAddError(Exception):
@@ -294,7 +305,44 @@ class NordluxMeshOptionsFlow(OptionsFlow):
         self._add_error = ""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        return self.async_show_menu(step_id="init", menu_options=["add_light", "cloud", "settings"])
+        return self.async_show_menu(step_id="init", menu_options=["add_light", "remove_light", "cloud", "settings"])
+
+    # --- Suppression d'une ampoule, avec réinitialisation à distance
+    async def async_step_remove_light(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        cur = self._current()
+        try:
+            devices = parse_devices(cur.get(CONF_DEVICES, ""))
+        except ValueError:
+            devices = []
+        if not devices:
+            return self.async_abort(reason="no_lights_configured")
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            unicast = int(user_input[CONF_LIGHT], 0)
+            mac = _mac_of_unicast(self.hass, unicast)
+            if user_input.get(CONF_RESET, True):
+                try:
+                    await self.config_entry.runtime_data.run(lambda link: link.nx_reset(unicast))
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.warning("Réinitialisation de 0x%04X impossible : %s", unicast, err)
+                    errors["base"] = "reset_failed"
+            if not errors:
+                proxies = [m.strip() for m in cur.get(CONF_PROXIES, "").split(",") if m.strip()]
+                # Une ampoule réinitialisée reste un proxy, mais d'un autre réseau : on la retire des proxys.
+                if mac and mac in proxies and len(proxies) > 1:
+                    proxies.remove(mac)
+                return self.async_create_entry(data={
+                    CONF_IV_INDEX: cur.get(CONF_IV_INDEX, 0),
+                    CONF_PROXIES: ", ".join(proxies),
+                    CONF_DEVICES: "\n".join(f"{n} = 0x{u:04X}" for n, u in devices if u != unicast),
+                })
+        options = [SelectOptionDict(value=f"0x{u:04X}", label=f"{n} (0x{u:04X})") for n, u in devices]
+        schema = vol.Schema({
+            vol.Required(CONF_LIGHT, default=(user_input or {}).get(CONF_LIGHT, options[0]["value"])):
+                SelectSelector(SelectSelectorConfig(options=options)),
+            vol.Required(CONF_RESET, default=not errors): bool,
+        })
+        return self.async_show_form(step_id="remove_light", data_schema=schema, errors=errors)
 
     # --- Ajout d'une ampoule réinitialisée, sans l'app
     async def async_step_add_light(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:

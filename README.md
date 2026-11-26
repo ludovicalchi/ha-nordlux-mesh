@@ -2,7 +2,9 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.4.0** : ajout d'une ampoule réinitialisée sans l'app, depuis les options. La méthode a été validée depuis un PC sur une Candle DIM, avec le même échange que l'intégration ; l'ajout depuis Home Assistant lui-même n'a pas encore été testé.
+> **Statut : 0.5.0** : suppression d'une ampoule avec réinitialisation à distance. Le message a été validé depuis un PC sur une Candle DIM (elle clignote et revient en attente de clés) ; la suppression depuis Home Assistant n'a pas encore été testée.
+>
+> **0.4.x** : ajout d'une ampoule réinitialisée sans l'app, testé dans Home Assistant sur une Candle DIM ; nettoyage des appareils orphelins.
 >
 > **0.3.0** : l'assistant ne demande plus que l'e-mail et le mot de passe, car les clés d'API de l'app sont intégrées. La lecture du compte avec ces clés a été vérifiée depuis un PC.
 >
@@ -15,7 +17,7 @@ Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, 
 - Une entité `light` par ampoule : marche/arrêt et luminosité (avec transition).
 - Connexion au réseau mesh via le Bluetooth de Home Assistant : adaptateur local ou **proxy Bluetooth ESPHome** en mode actif.
 - Configuration automatique depuis le compte Nordlux (clés, ampoules et proxys), ou saisie manuelle.
-- Ajout d'une ampoule réinitialisée directement depuis Home Assistant, sans l'app Nordlux.
+- Ajout d'une ampoule réinitialisée directement depuis Home Assistant, sans l'app Nordlux, et suppression avec réinitialisation à distance.
 - Aucune dépendance au cloud une fois les clés du réseau connues.
 
 **Non géré pour l'instant** : la température de couleur (le format est connu mais n'a pas été validé sur un modèle à blanc réglable), les groupes et pièces Nordlux, et la lecture de l'état réel.
@@ -110,7 +112,15 @@ Pour dialoguer avec le cloud, l'intégration utilise les clés d'API codées en 
 
 Après une réinitialisation, ces ampoules n'utilisent pas le provisioning Bluetooth Mesh standard. Elles rejoignent seules un réseau d'usine, puis l'app leur écrit en clair, sur un service GATT Nordlux, la NetKey, l'AppKey, l'adresse et le groupe de la maison (6 messages). L'intégration reproduit cet échange.
 
-Une ampoule ajoutée ainsi **n'apparaît pas dans l'app Nordlux**. Le cloud la garde à son ancienne adresse si elle y était. N'utilisez donc pas « Mettre à jour depuis mon compte » pour elle : il proposerait cette ancienne adresse. Pour la rendre à l'app, réinitialisez-la, puis ajoutez-la normalement depuis l'app.
+### Supprimer une ampoule
+
+**Configurer → Supprimer une ampoule (et la réinitialiser)** : choisissez l'ampoule.
+
+Si « Réinitialiser l'ampoule » est coché, l'intégration lui envoie d'abord, par le réseau mesh, la réinitialisation que l'app utilise pour les firmwares 18 et plus : message vendeur `E1 11 11 0A 00`. L'ampoule clignote, quitte le réseau, et peut être ajoutée de nouveau, ici ou dans l'app. Il n'est pas nécessaire d'être à portée directe de l'ampoule : n'importe quel proxy du réseau convient.
+
+L'ampoule est ensuite retirée de la liste, et de celle des proxys si elle est identifiée. Son appareil disparaît au rechargement.
+
+Une ampoule ajoutée sans l'app **n'apparaît pas dans l'app Nordlux**. Le cloud la garde à son ancienne adresse si elle y était. N'utilisez donc pas « Mettre à jour depuis mon compte » pour elle : il proposerait cette ancienne adresse. Pour la rendre à l'app, réinitialisez-la, puis ajoutez-la normalement depuis l'app.
 
 ### Saisie manuelle
 
