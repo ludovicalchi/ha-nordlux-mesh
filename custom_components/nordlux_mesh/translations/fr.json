@@ -67,6 +67,7 @@
       "init": {
         "title": "Réseau mesh Nordlux Smart",
         "menu_options": {
+          "add_light": "Ajouter une ampoule Nordlux réinitialisée (sans l'app)",
           "cloud": "Mettre à jour depuis mon compte Nordlux (nouvelles ampoules)",
           "settings": "Modifier les proxys et les ampoules à la main"
         }
@@ -95,6 +96,14 @@
           "proxies": "Adresses MAC BLE des proxys mesh, séparées par des virgules (bridge en premier)",
           "devices": "Ampoules, une par ligne : Nom = 0x2005"
         }
+      },
+      "add_light": {
+        "title": "Ajouter une ampoule réinitialisée",
+        "description": "Réinitialisez d'abord l'ampoule (3 extinctions/rallumages : elle clignote). Home Assistant recherche les ampoules en attente de clés via ses adaptateurs et proxys Bluetooth. L'ampoule reçoit les clés de ce réseau mesh et une adresse dans 0x7E00–0x7EFF ; elle n'apparaîtra pas dans l'app Nordlux.",
+        "data": {
+          "mac": "Ampoule",
+          "name": "Nom"
+        }
       }
     },
     "error": {
@@ -104,7 +113,16 @@
       "invalid_auth": "Connexion refusée : vérifiez l'e-mail et le mot de passe.",
       "cannot_connect": "Le cloud Nordlux est injoignable ou a renvoyé une réponse inattendue.",
       "no_lights": "Aucune ampoule avec une adresse mesh sur ce compte.",
-      "house_not_found": "Aucune maison de ce compte n'utilise le réseau mesh de cette intégration."
+      "house_not_found": "Aucune maison de ce compte n'utilise le réseau mesh de cette intégration.",
+      "no_reset_lights": "Aucune ampoule Nordlux réinitialisée trouvée. Réinitialisez-la, gardez-la près d'un proxy Bluetooth, puis validez pour relancer la recherche.",
+      "light_gone": "Cette ampoule n'est plus visible : validez pour relancer la recherche."
+    },
+    "progress": {
+      "adding_light": "Envoi des clés du réseau à « {name} » (adresse {address}), puis attente de sa confirmation. Cela peut prendre jusqu'à une minute."
+    },
+    "abort": {
+      "add_failed": "L'ampoule n'a pas pu être ajoutée : {error}",
+      "no_free_address": "Plus d'adresse libre dans 0x7E00–0x7EFF."
     }
   }
 }

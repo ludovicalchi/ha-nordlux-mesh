@@ -2,7 +2,9 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.3.0** : l'assistant ne demande plus que l'e-mail et le mot de passe, car les clés d'API de l'app sont intégrées. La lecture du compte avec ces clés a été vérifiée depuis un PC.
+> **Statut : 0.4.0** : ajout d'une ampoule réinitialisée sans l'app, depuis les options. La méthode a été validée depuis un PC sur une Candle DIM, avec le même échange que l'intégration ; l'ajout depuis Home Assistant lui-même n'a pas encore été testé.
+>
+> **0.3.0** : l'assistant ne demande plus que l'e-mail et le mot de passe, car les clés d'API de l'app sont intégrées. La lecture du compte avec ces clés a été vérifiée depuis un PC.
 >
 > **0.2.0** : ajout de la configuration depuis le compte Nordlux. Testée le 23/11/2026 dans Home Assistant 2026.11, sur un vrai compte à une seule maison : la mise à jour depuis le compte (options de l'intégration) a retrouvé les clés, l'ampoule et les proxys, et l'ampoule répond toujours ensuite. L'ajout initial depuis le compte utilise la même lecture, mais n'a pas été déroulé de bout en bout.
 >
@@ -13,6 +15,7 @@ Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, 
 - Une entité `light` par ampoule : marche/arrêt et luminosité (avec transition).
 - Connexion au réseau mesh via le Bluetooth de Home Assistant : adaptateur local ou **proxy Bluetooth ESPHome** en mode actif.
 - Configuration automatique depuis le compte Nordlux (clés, ampoules et proxys), ou saisie manuelle.
+- Ajout d'une ampoule réinitialisée directement depuis Home Assistant, sans l'app Nordlux.
 - Aucune dépendance au cloud une fois les clés du réseau connues.
 
 **Non géré pour l'instant** : la température de couleur (le format est connu mais n'a pas été validé sur un modèle à blanc réglable), les groupes et pièces Nordlux, et la lecture de l'état réel.
@@ -94,7 +97,20 @@ Le mot de passe n'est **pas enregistré** : seules les clés du réseau mesh, le
 
 Pour dialoguer avec le cloud, l'intégration utilise les clés d'API codées en dur dans l'app Android Nordlux (v2.6.2). Ces clés sont les mêmes pour tous les utilisateurs et ne donnent accès à aucun compte sans son e-mail et son mot de passe. Si une future version de l'app en change, l'assistant cessera de fonctionner jusqu'à une mise à jour de l'intégration. La saisie manuelle restera alors possible.
 
-**Nouvelle ampoule** : ajoutez-la d'abord dans l'app Nordlux. Ensuite, dans l'intégration, ouvrez **Configurer → Mettre à jour depuis mon compte Nordlux**. Les noms déjà choisis sont conservés.
+**Nouvelle ampoule ajoutée dans l'app** : dans l'intégration, ouvrez **Configurer → Mettre à jour depuis mon compte Nordlux**. Les noms déjà choisis sont conservés.
+
+### Ajouter une ampoule sans l'app
+
+**Configurer → Ajouter une ampoule Nordlux réinitialisée (sans l'app)** :
+
+1. Réinitialisez l'ampoule : 3 extinctions/rallumages à 2–4 s d'intervalle. Elle clignote 3 fois.
+2. L'intégration liste les ampoules Nordlux en attente de clés, vues par les adaptateurs ou proxys Bluetooth de Home Assistant. Choisissez-la et donnez-lui un nom.
+3. L'intégration lui envoie les clés du réseau et une adresse libre entre 0x7E00 et 0x7EFF, comme le fait l'app Nordlux. Elle attend ensuite que l'ampoule annonce sa nouvelle configuration.
+4. L'ampoule est ajoutée à la liste, et à celle des proxys.
+
+Après une réinitialisation, ces ampoules n'utilisent pas le provisioning Bluetooth Mesh standard. Elles rejoignent seules un réseau d'usine, puis l'app leur écrit en clair, sur un service GATT Nordlux, la NetKey, l'AppKey, l'adresse et le groupe de la maison (6 messages). L'intégration reproduit cet échange.
+
+Une ampoule ajoutée ainsi **n'apparaît pas dans l'app Nordlux**. Le cloud la garde à son ancienne adresse si elle y était. N'utilisez donc pas « Mettre à jour depuis mon compte » pour elle : il proposerait cette ancienne adresse. Pour la rendre à l'app, réinitialisez-la, puis ajoutez-la normalement depuis l'app.
 
 ### Saisie manuelle
 

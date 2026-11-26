@@ -2,12 +2,15 @@
 automatiquement) ou par saisie manuelle des clés du réseau mesh, des proxys BLE et des ampoules."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from typing import Any
 
 import voluptuous as vol
+from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 
+from homeassistant.components import bluetooth
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_EMAIL, CONF_NAME, CONF_PASSWORD
 from homeassistant.core import HomeAssistant, callback
@@ -24,8 +27,79 @@ from .const import (
 )
 from .hub import parse_devices
 from .mesh import k3
+from .nxadd import NX_COMPANY, NX_WRITE, next_free_address, nx_config_messages, parse_nx_mfr
 
 _LOGGER = logging.getLogger(__name__)
+CONF_MAC = "mac"
+VERIFY_TIMEOUT_S = 45
+
+
+class NxAddError(Exception):
+    """Échec de l'ajout d'une ampoule réinitialisée."""
+
+
+def _reset_lights(hass: HomeAssistant) -> dict[str, tuple[dict, int]]:
+    """Ampoules Nordlux réinitialisées (clés non configurées) vues par un adaptateur ou proxy connectable."""
+    found: dict[str, tuple[dict, int]] = {}
+    for si in bluetooth.async_discovered_service_info(hass, connectable=True):
+        info = parse_nx_mfr(si.manufacturer_data.get(NX_COMPANY))
+        if info and not info["configured"]:
+            found[si.address.upper()] = (info, si.rssi)
+    return found
+
+
+async def _async_nx_add(hass: HomeAssistant, mac: str, netkey: bytes, appkey: bytes, new_addr: int,
+                        room_num: int = 1) -> None:
+    """Envoie à l'ampoule les clés du réseau et sa nouvelle adresse, puis attend qu'elle l'annonce."""
+    si = bluetooth.async_last_service_info(hass, mac, connectable=True)
+    info = parse_nx_mfr(si.manufacturer_data.get(NX_COMPANY)) if si else None
+    if info is None:
+        raise NxAddError("ampoule plus visible")
+    if info["configured"]:
+        raise NxAddError("l'ampoule a déjà des clés : réinitialisez-la d'abord")
+    device = bluetooth.async_ble_device_from_address(hass, mac, connectable=True)
+    if device is None:
+        raise NxAddError("aucun proxy Bluetooth connectable ne voit l'ampoule")
+    msgs = nx_config_messages(info["addr_raw"], netkey, appkey, new_addr, room_num)
+    for attempt in (1, 2):
+        try:
+            client = await establish_connection(BleakClientWithServiceCache, device, f"nordlux-add {mac}",
+                                                max_attempts=3)
+        except Exception as err:  # noqa: BLE001
+            raise NxAddError(f"connexion impossible : {err}") from err
+        try:
+            if client.services.get_characteristic(NX_WRITE) is None:
+                # Cache GATT périmé : l'ampoule réorganise ses services après une réinitialisation.
+                await client.clear_cache()
+                if attempt == 2:
+                    raise NxAddError("service de configuration Nordlux introuvable")
+                continue
+            for msg in msgs:
+                await client.write_gatt_char(NX_WRITE, msg, response=True)
+                await asyncio.sleep(0.3)
+            await asyncio.sleep(2)
+            break
+        except NxAddError:
+            raise
+        except Exception as err:  # noqa: BLE001
+            raise NxAddError(f"écriture impossible : {err}") from err
+        finally:
+            try:
+                await client.disconnect()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def _configured(service_info: bluetooth.BluetoothServiceInfoBleak) -> bool:
+        new = parse_nx_mfr(service_info.manufacturer_data.get(NX_COMPANY))
+        return bool(new and new["configured"] and new["addr"] == new_addr)
+
+    try:
+        await bluetooth.async_process_advertisements(
+            hass, _configured, {"address": mac, "connectable": False},
+            bluetooth.BluetoothScanningMode.PASSIVE, VERIFY_TIMEOUT_S,
+        )
+    except asyncio.TimeoutError as err:
+        raise NxAddError("l'ampoule n'annonce pas sa nouvelle configuration") from err
 
 _HEX32 = re.compile(r"^[0-9a-fA-F]{32}$")
 _MAC = re.compile(r"^([0-9A-F]{2}:){5}[0-9A-F]{2}$")
@@ -215,9 +289,75 @@ class NordluxMeshConfigFlow(ConfigFlow, domain=DOMAIN):
 class NordluxMeshOptionsFlow(OptionsFlow):
     def __init__(self) -> None:
         self._house: CloudHouse | None = None
+        self._add: dict[str, Any] = {}
+        self._add_task: asyncio.Task | None = None
+        self._add_error = ""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        return self.async_show_menu(step_id="init", menu_options=["cloud", "settings"])
+        return self.async_show_menu(step_id="init", menu_options=["add_light", "cloud", "settings"])
+
+    # --- Ajout d'une ampoule réinitialisée, sans l'app
+    async def async_step_add_light(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        found = _reset_lights(self.hass)
+        errors: dict[str, str] = {}
+        if user_input is not None and user_input.get(CONF_MAC):
+            mac = user_input[CONF_MAC]
+            if mac in found:
+                try:
+                    used = {u for _, u in parse_devices(self._current().get(CONF_DEVICES, ""))}
+                    addr = next_free_address(used)
+                except ValueError:
+                    return self.async_abort(reason="no_free_address")
+                name = (user_input.get(CONF_NAME) or "").replace("=", "-").replace("\n", " ").strip()
+                self._add = {"mac": mac, "name": name or "Ampoule Nordlux", "addr": addr}
+                self._add_task = None
+                return await self.async_step_add_light_run()
+            errors["base"] = "light_gone"
+        if not found:
+            # Formulaire vide : valider relance la recherche.
+            return self.async_show_form(step_id="add_light", data_schema=vol.Schema({}),
+                                        errors=errors or {"base": "no_reset_lights"})
+        options = [SelectOptionDict(value=mac, label=f"{mac} · {info['beacon']} v{info['version']} · {rssi} dBm")
+                   for mac, (info, rssi) in sorted(found.items(), key=lambda x: -x[1][1])]
+        schema = vol.Schema({
+            vol.Required(CONF_MAC, default=options[0]["value"]): SelectSelector(SelectSelectorConfig(options=options)),
+            vol.Required(CONF_NAME, default="Ampoule Nordlux"): str,
+        })
+        return self.async_show_form(step_id="add_light", data_schema=schema, errors=errors)
+
+    async def async_step_add_light_run(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        if self._add_task is None:
+            data = self.config_entry.data
+            self._add_task = self.hass.async_create_task(_async_nx_add(
+                self.hass, self._add["mac"], bytes.fromhex(data[CONF_NETKEY]), bytes.fromhex(data[CONF_APPKEY]),
+                self._add["addr"]))
+        if not self._add_task.done():
+            return self.async_show_progress(
+                step_id="add_light_run", progress_action="adding_light", progress_task=self._add_task,
+                description_placeholders={"name": self._add["name"], "address": f"0x{self._add['addr']:04X}"},
+            )
+        err = None if self._add_task.cancelled() else self._add_task.exception()
+        if self._add_task.cancelled() or err is not None:
+            self._add_error = str(err) if err else "annulé"
+            _LOGGER.warning("Ajout de l'ampoule %s impossible : %s", self._add["mac"], self._add_error)
+            return self.async_show_progress_done(next_step_id="add_light_failed")
+        return self.async_show_progress_done(next_step_id="add_light_done")
+
+    async def async_step_add_light_done(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        cur = self._current()
+        devices = "\n".join(filter(None, [cur.get(CONF_DEVICES, "").strip(),
+                                          f"{self._add['name']} = 0x{self._add['addr']:04X}"]))
+        proxies = [m.strip() for m in cur.get(CONF_PROXIES, "").split(",") if m.strip()]
+        if self._add["mac"] not in proxies:
+            proxies.append(self._add["mac"])  # chaque ampoule est aussi un proxy mesh
+        return self.async_create_entry(data={
+            CONF_IV_INDEX: cur.get(CONF_IV_INDEX, 0),
+            CONF_PROXIES: ", ".join(proxies),
+            CONF_DEVICES: devices,
+        })
+
+    async def async_step_add_light_failed(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return self.async_abort(reason="add_failed", description_placeholders={"error": self._add_error})
 
     def _current(self) -> dict[str, Any]:
         return {**self.config_entry.data, **self.config_entry.options}

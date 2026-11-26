@@ -67,6 +67,7 @@
       "init": {
         "title": "Nordlux Smart mesh network",
         "menu_options": {
+          "add_light": "Add a reset Nordlux light (without the app)",
           "cloud": "Update from my Nordlux account (new lights)",
           "settings": "Edit the proxies and lights manually"
         }
@@ -95,6 +96,14 @@
           "proxies": "BLE MAC addresses of mesh proxies, comma separated (bridge first)",
           "devices": "Lights, one per line: Name = 0x2005"
         }
+      },
+      "add_light": {
+        "title": "Add a reset light",
+        "description": "Reset the light first (switch it off and on 3 times: it blinks). Lights waiting for keys are searched through the Bluetooth adapters and proxies of Home Assistant. The light receives the keys of this mesh network and an address in 0x7E00–0x7EFF; it will not appear in the Nordlux app.",
+        "data": {
+          "mac": "Light",
+          "name": "Name"
+        }
       }
     },
     "error": {
@@ -104,7 +113,16 @@
       "invalid_auth": "Login refused: check the email and the password.",
       "cannot_connect": "The Nordlux cloud could not be reached or returned an unexpected answer.",
       "no_lights": "No light with a mesh address was found on this account.",
-      "house_not_found": "This account has no home using the mesh network of this integration."
+      "house_not_found": "This account has no home using the mesh network of this integration.",
+      "no_reset_lights": "No reset Nordlux light found. Reset it, keep it near a Bluetooth proxy, then submit again to search.",
+      "light_gone": "This light is no longer visible: submit again to search."
+    },
+    "progress": {
+      "adding_light": "Sending the network keys to « {name} » (address {address}) and waiting for its confirmation. This can take up to a minute."
+    },
+    "abort": {
+      "add_failed": "The light could not be added: {error}",
+      "no_free_address": "No free address left in 0x7E00–0x7EFF."
     }
   }
 }
