@@ -2,7 +2,9 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.6.0, testée** du 22 au 26/11/2026, dans Home Assistant 2026.11 (Container), via un ESP32 proxy Bluetooth ESPHome, sur une Candle DIM (`nx00626222`, firmware 27.3). Vérifié visuellement dans Home Assistant :
+> **0.7.0** : lecture de l'état réel des ampoules (Light CTL Get), toutes les 5 minutes. La lecture elle-même a été vérifiée depuis un PC : éteinte, allumée, et après une coupure à l'interrupteur. Son intégration dans Home Assistant n'a pas encore été testée.
+>
+> **0.6.0, testée** du 22 au 26/11/2026, dans Home Assistant 2026.11 (Container), via un ESP32 proxy Bluetooth ESPHome, sur une Candle DIM (`nx00626222`, firmware 27.3). Vérifié visuellement dans Home Assistant :
 > - extinction, rallumage et luminosité, avec l'interrupteur standard ;
 > - ajout d'une ampoule réinitialisée sans l'app ;
 > - suppression par le bouton de l'appareil : l'ampoule clignote, quitte le réseau, et son appareil disparaît ;
@@ -20,13 +22,13 @@ Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, 
 
 ## Fonctionnalités
 
-- Une entité `light` par ampoule : marche/arrêt et luminosité (avec transition).
+- Une entité `light` par ampoule : marche/arrêt et luminosité (avec transition), avec relecture périodique de l'état réel.
 - Connexion au réseau mesh via le Bluetooth de Home Assistant : adaptateur local ou **proxy Bluetooth ESPHome** en mode actif.
 - Configuration automatique depuis le compte Nordlux (clés, ampoules et proxys), ou saisie manuelle.
 - Ajout d'une ampoule réinitialisée directement depuis Home Assistant, sans l'app Nordlux, et suppression avec réinitialisation à distance.
 - Aucune dépendance au cloud une fois les clés du réseau connues.
 
-**Non géré pour l'instant** : la température de couleur (le format est connu mais n'a pas été validé sur un modèle à blanc réglable), les groupes et pièces Nordlux, et la lecture de l'état réel.
+**Non géré pour l'instant** : la température de couleur (le format est connu mais n'a pas été validé sur un modèle à blanc réglable), et les groupes et pièces Nordlux.
 
 ## Prérequis
 
@@ -156,7 +158,13 @@ Ensuite, les ampoules s'ajoutent et se suppriment comme décrit plus haut. Il n'
   | Éteindre | 0 | 15000 | 0 |
   | Luminosité | pourcentage 0–100 | 800 + teinte en % (900 par défaut) | 400 ms |
 
-- **L'état affiché est le dernier état envoyé** : les réponses de l'ampoule ne reflètent pas sa lumière réelle. Home Assistant mémorise donc la dernière commande, et la restaure au redémarrage. Un changement fait depuis l'app Nordlux n'est pas vu par Home Assistant, et inversement. L'entité s'affiche avec un interrupteur standard.
+- **L'état réel est relu** toutes les 5 minutes, et 20 s après le démarrage, sur une seule connexion au proxy pour toutes les ampoules.
+  - La lecture utilise la *present lightness* de **Light CTL Status** : la luminosité en %, 0 quand l'ampoule est éteinte.
+  - Vérifié sur une Candle DIM : 0 éteinte, la valeur envoyée une fois allumée, et la même valeur après une coupure de courant à l'interrupteur.
+  - Les statuts standard Generic OnOff et Light Lightness, eux, ne reflètent pas la lumière.
+  - Après une commande, l'affichage change aussitôt, puis la lecture suivante le confirme ou le corrige.
+  - Si l'ampoule ne répond pas, le dernier état connu est conservé.
+  - L'entité s'affiche avec un interrupteur standard.
 - **Anti-rejeu** : chaque message mesh porte un numéro de séquence qui ne doit jamais être réutilisé pour une même adresse source. L'intégration le réserve par blocs et l'enregistre dans le stockage de Home Assistant. Le prochain numéro reprend toujours au-delà du dernier bloc réservé, y compris après un redémarrage. N'utilisez pas la même adresse source dans un autre outil.
 - La connexion au proxy est ouverte à la demande et fermée après 30 s d'inactivité, pour ne pas occuper durablement les connexions limitées d'un proxy ESPHome.
 - Le bridge Nordlux peut rester allumé : il n'annule pas les commandes locales.

@@ -2,14 +2,18 @@
 from __future__ import annotations
 
 import logging
+import time
+from datetime import timedelta
 
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import CONF_DEVICES, DOMAIN
+from .const import CONF_DEVICES, DOMAIN, FIRST_POLL_DELAY_S, STATE_POLL_S
 from .hub import NordluxMeshHub, async_remove_light, entry_value, parse_devices
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,6 +40,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> b
     hub = NordluxMeshHub(hass, entry)
     await hub.async_setup()
     entry.runtime_data = hub
+
+    # Lecture périodique de l'état réel (Light CTL Get) de toutes les ampoules, sur une seule connexion.
+    async def _async_update() -> dict:
+        # read_at : début de la lecture ; une entité ignore une lecture commencée avant sa dernière commande.
+        read_at = time.monotonic()
+        try:
+            unicasts = [u for _, u in parse_devices(entry_value(entry, CONF_DEVICES, ""))]
+        except ValueError:
+            unicasts = []
+        if not unicasts:
+            return {"read_at": read_at, "lightness": {}}
+        try:
+            return {"read_at": read_at, "lightness": await hub.async_read_lightness(unicasts)}
+        except Exception as err:  # noqa: BLE001
+            raise UpdateFailed(f"lecture de l'état impossible : {err}") from err
+
+    hub.coordinator = DataUpdateCoordinator(
+        hass, _LOGGER, config_entry=entry, name=f"{DOMAIN} état",
+        update_method=_async_update, update_interval=timedelta(seconds=STATE_POLL_S),
+    )
+
+    async def _async_first_poll(_now) -> None:
+        await hub.coordinator.async_refresh()
+
+    entry.async_on_unload(async_call_later(hass, FIRST_POLL_DELAY_S, _async_first_poll))
     # Appareils d'ampoules retirées de la liste (changement d'adresse, ampoule supprimée) : on les retire.
     registry = dr.async_get(hass)
     for device in dr.async_entries_for_config_entry(registry, entry.entry_id):

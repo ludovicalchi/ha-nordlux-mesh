@@ -18,4 +18,8 @@ IDLE_DISCONNECT_S = 30
 # Le SEQ est réservé par blocs : on enregistre la borne haute avant de l'atteindre, et on
 # repart de cette borne au démarrage, pour ne jamais réutiliser un SEQ après un redémarrage.
 SEQ_BLOCK = 64
+# Lecture de l'état réel des ampoules (Light CTL Get) : intervalle, et délai après le démarrage
+# (laisse le temps aux proxys Bluetooth d'être découverts). Chaque lecture ouvre une connexion au proxy.
+STATE_POLL_S = 300
+FIRST_POLL_DELAY_S = 20
 STORAGE_VERSION = 1

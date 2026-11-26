@@ -94,6 +94,7 @@ class NordluxMeshHub:
         self.proxies: list[str] = [m.strip().upper() for m in entry_value(entry, CONF_PROXIES, "").split(",") if m.strip()]
         self.net: MeshNetwork | None = None
         self.link: ProxyLink | None = None
+        self.coordinator: Any = None  # DataUpdateCoordinator de l'état réel, créé dans __init__.py
 
     async def async_setup(self) -> None:
         data = await self._store.async_load() or {}
@@ -144,14 +145,22 @@ class NordluxMeshHub:
             return client
         raise HomeAssistantError("Aucun proxy Nordlux joignable (" + " ; ".join(errors or ["aucun proxy configuré"]) + ")")
 
-    async def run(self, action: Callable[[ProxyLink], Awaitable[Any]]) -> Any:
-        """Exécute une commande sur le lien proxy (une seule à la fois, une nouvelle tentative)."""
+    async def async_read_lightness(self, unicasts: list[int]) -> dict[int, int | None]:
+        """Luminosité réelle (%) de chaque ampoule, sur une seule connexion ; None si pas de réponse."""
+        async def _read(link: ProxyLink) -> dict[int, int | None]:
+            return {u: await link.nx_read_lightness(u) for u in unicasts}
+        return await self.run(_read, needed=4 + 2 * len(unicasts))
+
+    async def run(self, action: Callable[[ProxyLink], Awaitable[Any]], needed: int = 8) -> Any:
+        """Exécute une commande sur le lien proxy (une seule à la fois, une nouvelle tentative).
+
+        `needed` : nombre de messages mesh que l'action peut émettre (réservation des SEQ)."""
         assert self.link is not None
         async with self._lock:
             self._cancel_idle()
             try:
                 for attempt in (1, 2):
-                    await self._reserve_seq()
+                    await self._reserve_seq(needed)
                     try:
                         return await action(self.link)
                     except HomeAssistantError:
