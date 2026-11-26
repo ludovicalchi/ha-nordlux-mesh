@@ -58,13 +58,18 @@ def mac_of_unicast(hass: HomeAssistant, unicast: int) -> str | None:
     return None
 
 
-async def async_remove_light(hass: HomeAssistant, entry: ConfigEntry, unicast: int, reset: bool) -> dict[str, Any]:
-    """Réinitialise l'ampoule (si demandé) et renvoie les nouvelles options sans elle.
+async def async_remove_light(hass: HomeAssistant, entry: ConfigEntry, unicast: int,
+                             reset: bool) -> tuple[dict[str, Any], str | None]:
+    """Réinitialise l'ampoule (si demandé, au mieux) et renvoie (nouvelles options sans elle, erreur de réinitialisation).
 
-    Lève une exception si la réinitialisation échoue : rien n'est alors modifié."""
+    La suppression n'est jamais bloquée : si aucun proxy n'est joignable, l'erreur est renvoyée à l'appelant."""
     mac = mac_of_unicast(hass, unicast)
+    reset_error: str | None = None
     if reset:
-        await entry.runtime_data.run(lambda link: link.nx_reset(unicast))
+        try:
+            await entry.runtime_data.run(lambda link: link.nx_reset(unicast))
+        except Exception as err:  # noqa: BLE001
+            reset_error = str(err)
     devices = parse_devices(entry_value(entry, CONF_DEVICES, ""))
     proxies = [m.strip() for m in entry_value(entry, CONF_PROXIES, "").split(",") if m.strip()]
     # Une ampoule réinitialisée reste un proxy, mais d'un autre réseau : on la retire des proxys.
@@ -74,7 +79,7 @@ async def async_remove_light(hass: HomeAssistant, entry: ConfigEntry, unicast: i
         CONF_IV_INDEX: entry_value(entry, CONF_IV_INDEX, 0),
         CONF_PROXIES: ", ".join(proxies),
         CONF_DEVICES: "\n".join(f"{n} = 0x{u:04X}" for n, u in devices if u != unicast),
-    }
+    }, reset_error
 
 
 class NordluxMeshHub:

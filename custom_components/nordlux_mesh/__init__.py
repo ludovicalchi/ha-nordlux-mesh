@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import logging
 
+from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 
 from .const import CONF_DEVICES, DOMAIN
@@ -49,10 +49,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> b
 
 async def async_remove_config_entry_device(hass: HomeAssistant, entry: NordluxConfigEntry,
                                            device: dr.DeviceEntry) -> bool:
-    """Bouton « Supprimer » de l'appareil : comme Configurer → Supprimer une ampoule (avec réinitialisation).
+    """Bouton « Supprimer » de l'appareil : réinitialisation à distance (au mieux) puis retrait de la liste.
 
-    Appareil orphelin : supprimé directement. Ampoule configurée : réinitialisée à distance puis retirée
-    de la liste ; si la réinitialisation échoue, la suppression est refusée avec un message."""
+    Appareil orphelin : supprimé directement. Ampoule configurée : réinitialisée à distance puis retirée de la
+    liste. Si aucun proxy n'est joignable, elle est retirée quand même et une notification demande de la
+    réinitialiser à la main."""
     if _is_stale(entry, device):
         return True
     prefix = f"{entry.entry_id}_"
@@ -60,14 +61,20 @@ async def async_remove_config_entry_device(hass: HomeAssistant, entry: NordluxCo
                     if domain == DOMAIN and ident.startswith(prefix)), None)
     if unicast is None:
         return False
-    try:
-        new_options = await async_remove_light(hass, entry, unicast, reset=True)
-    except Exception as err:
-        raise HomeAssistantError(
-            f"Réinitialisation de l'ampoule 0x{unicast:04X} impossible ({err}). Pour la retirer sans la "
-            "réinitialiser : Configurer → Supprimer une ampoule, case « Réinitialiser » décochée."
-        ) from err
-    _LOGGER.info("Ampoule 0x%04X réinitialisée et retirée de la liste", unicast)
+    new_options, reset_error = await async_remove_light(hass, entry, unicast, reset=True)
+    if reset_error:
+        _LOGGER.warning("Ampoule 0x%04X retirée sans réinitialisation : %s", unicast, reset_error)
+        persistent_notification.async_create(
+            hass,
+            f"L'ampoule « {device.name} » (0x{unicast:04X}) a été retirée de Home Assistant, mais la "
+            f"réinitialisation n'a pas pu lui être envoyée ({reset_error}).\n\n"
+            "Elle fait donc toujours partie du réseau mesh. Pour la réutiliser, réinitialisez-la à la main : "
+            "3 extinctions/rallumages à 2–4 s d'intervalle (elle clignote).",
+            title="Nordlux : ampoule non réinitialisée",
+            notification_id=f"{DOMAIN}_reset_{entry.entry_id}_{unicast:04x}",
+        )
+    else:
+        _LOGGER.info("Ampoule 0x%04X réinitialisée et retirée de la liste", unicast)
     hass.config_entries.async_update_entry(entry, options=new_options)  # rechargement par l'écouteur
     return True
 

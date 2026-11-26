@@ -68,17 +68,7 @@
         "title": "Nordlux Smart mesh network",
         "menu_options": {
           "add_light": "Add a reset Nordlux light (without the app)",
-          "remove_light": "Remove a light (and reset it)",
-          "cloud": "Update from my Nordlux account (new lights)",
-          "settings": "Edit the proxies and lights manually"
-        }
-      },
-      "settings": {
-        "title": "Nordlux Smart mesh network",
-        "data": {
-          "iv_index": "IV index",
-          "proxies": "BLE MAC addresses of mesh proxies, comma separated (bridge first)",
-          "devices": "Lights, one per line: Name = 0x2005"
+          "cloud": "Update from my Nordlux account (new lights)"
         }
       },
       "cloud": {
@@ -105,14 +95,6 @@
           "mac": "Light",
           "name": "Name"
         }
-      },
-      "remove_light": {
-        "title": "Remove a light",
-        "description": "The light is removed from this list and its device disappears. If « Reset the light » is checked, it first receives the remote reset of the Nordlux app: it blinks, leaves the network and can be added again (here or in the app).",
-        "data": {
-          "light": "Light",
-          "reset": "Reset the light"
-        }
       }
     },
     "error": {
@@ -124,16 +106,14 @@
       "no_lights": "No light with a mesh address was found on this account.",
       "house_not_found": "This account has no home using the mesh network of this integration.",
       "no_reset_lights": "No reset Nordlux light found. Reset it, keep it near a Bluetooth proxy, then submit again to search.",
-      "light_gone": "This light is no longer visible: submit again to search.",
-      "reset_failed": "The reset message could not be sent (no reachable proxy?). Uncheck « Reset the light » to remove it from the list anyway."
+      "light_gone": "This light is no longer visible: submit again to search."
     },
     "progress": {
       "adding_light": "Sending the network keys to « {name} » (address {address}) and waiting for its confirmation. This can take up to a minute."
     },
     "abort": {
       "add_failed": "The light could not be added: {error}",
-      "no_free_address": "No free address left in 0x7E00–0x7EFF.",
-      "no_lights_configured": "No light is configured."
+      "no_free_address": "No free address left in 0x7E00–0x7EFF."
     }
   }
 }

@@ -1,7 +1,8 @@
 """Entités light pour les ampoules Nordlux Smart (commandes de l'app : Light CTL Set détourné).
 
-Les statuts renvoyés par l'ampoule ne reflètent pas l'état réel de la lumière : l'état est
-mémorisé par Home Assistant (assumed_state) et restauré au redémarrage.
+Les statuts renvoyés par l'ampoule ne reflètent pas l'état réel de la lumière : l'état affiché est
+le dernier envoyé (optimiste), mémorisé et restauré au redémarrage. `assumed_state` n'est pas utilisé,
+pour que Home Assistant affiche un interrupteur standard plutôt que deux boutons « éclair ».
 """
 from __future__ import annotations
 
@@ -33,7 +34,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry,
 class NordluxLight(RestoreEntity, LightEntity):
     _attr_has_entity_name = True
     _attr_name = None
-    _attr_assumed_state = True
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
     _attr_supported_features = LightEntityFeature.TRANSITION

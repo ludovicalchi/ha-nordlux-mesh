@@ -25,14 +25,12 @@ from .const import (
     CONF_APPKEY, CONF_DEVICES, CONF_HOUSE, CONF_IV_INDEX, CONF_NETKEY, CONF_PROXIES, CONF_SRC, DEFAULT_SRC,
     DOMAIN,
 )
-from .hub import async_remove_light, parse_devices
+from .hub import parse_devices
 from .mesh import k3
 from .nxadd import NX_COMPANY, NX_WRITE, next_free_address, nx_config_messages, parse_nx_mfr
 
 _LOGGER = logging.getLogger(__name__)
 CONF_MAC = "mac"
-CONF_LIGHT = "light"
-CONF_RESET = "reset"
 VERIFY_TIMEOUT_S = 45
 
 
@@ -296,35 +294,8 @@ class NordluxMeshOptionsFlow(OptionsFlow):
         self._add_error = ""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        return self.async_show_menu(step_id="init", menu_options=["add_light", "remove_light", "cloud", "settings"])
-
-    # --- Suppression d'une ampoule, avec réinitialisation à distance
-    async def async_step_remove_light(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        cur = self._current()
-        try:
-            devices = parse_devices(cur.get(CONF_DEVICES, ""))
-        except ValueError:
-            devices = []
-        if not devices:
-            return self.async_abort(reason="no_lights_configured")
-        errors: dict[str, str] = {}
-        if user_input is not None:
-            unicast = int(user_input[CONF_LIGHT], 0)
-            try:
-                new_options = await async_remove_light(self.hass, self.config_entry, unicast,
-                                                       reset=user_input.get(CONF_RESET, True))
-            except Exception as err:  # noqa: BLE001
-                _LOGGER.warning("Réinitialisation de 0x%04X impossible : %s", unicast, err)
-                errors["base"] = "reset_failed"
-            else:
-                return self.async_create_entry(data=new_options)
-        options = [SelectOptionDict(value=f"0x{u:04X}", label=f"{n} (0x{u:04X})") for n, u in devices]
-        schema = vol.Schema({
-            vol.Required(CONF_LIGHT, default=(user_input or {}).get(CONF_LIGHT, options[0]["value"])):
-                SelectSelector(SelectSelectorConfig(options=options)),
-            vol.Required(CONF_RESET, default=not errors): bool,
-        })
-        return self.async_show_form(step_id="remove_light", data_schema=schema, errors=errors)
+        # Suppression : bouton « Supprimer » de l'appareil (réinitialisation à distance, cf. __init__.py).
+        return self.async_show_menu(step_id="init", menu_options=["add_light", "cloud"])
 
     # --- Ajout d'une ampoule réinitialisée, sans l'app
     async def async_step_add_light(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -391,20 +362,6 @@ class NordluxMeshOptionsFlow(OptionsFlow):
 
     def _current(self) -> dict[str, Any]:
         return {**self.config_entry.data, **self.config_entry.options}
-
-    async def async_step_settings(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        errors: dict[str, str] = {}
-        if user_input is not None:
-            data = _validate_common(user_input, errors)
-            if not errors:
-                return self.async_create_entry(data=data)
-        cur = {**self._current(), **(user_input or {})}
-        schema = vol.Schema({
-            vol.Required(CONF_IV_INDEX, default=cur.get(CONF_IV_INDEX, 0)): vol.Coerce(int),
-            vol.Required(CONF_PROXIES, default=cur.get(CONF_PROXIES, "")): str,
-            vol.Required(CONF_DEVICES, default=cur.get(CONF_DEVICES, "")): _MULTILINE,
-        })
-        return self.async_show_form(step_id="settings", data_schema=schema, errors=errors)
 
     # --- Mise à jour depuis le compte Nordlux (nouvelles ampoules, proxys, IV index)
     async def async_step_cloud(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:

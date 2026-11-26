@@ -2,7 +2,9 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.5.0** : suppression d'une ampoule avec réinitialisation à distance. Le message a été validé depuis un PC sur une Candle DIM (elle clignote et revient en attente de clés) ; la suppression depuis Home Assistant n'a pas encore été testée.
+> **Statut : 0.6.0** : options simplifiées (ajout d'une ampoule réinitialisée, mise à jour depuis le compte) ; suppression par le bouton standard de l'appareil.
+>
+> **0.5.x** : suppression d'une ampoule avec réinitialisation à distance, testée dans Home Assistant sur une Candle DIM : elle clignote, quitte le réseau, et son appareil disparaît.
 >
 > **0.4.x** : ajout d'une ampoule réinitialisée sans l'app, testé dans Home Assistant sur une Candle DIM ; nettoyage des appareils orphelins.
 >
@@ -114,13 +116,17 @@ Après une réinitialisation, ces ampoules n'utilisent pas le provisioning Bluet
 
 ### Supprimer une ampoule
 
-**Configurer → Supprimer une ampoule (et la réinitialiser)** : choisissez l'ampoule.
+Utilisez le bouton **Supprimer** standard de l'appareil (⋮ sur la page de l'appareil).
 
-Si « Réinitialiser l'ampoule » est coché, l'intégration lui envoie d'abord, par le réseau mesh, la réinitialisation que l'app utilise pour les firmwares 18 et plus : message vendeur `E1 11 11 0A 00`. L'ampoule clignote, quitte le réseau, et peut être ajoutée de nouveau, ici ou dans l'app. Il n'est pas nécessaire d'être à portée directe de l'ampoule : n'importe quel proxy du réseau convient.
+L'intégration envoie d'abord à l'ampoule, par le réseau mesh, la réinitialisation que l'app utilise pour les firmwares 18 et plus : message vendeur `E1 11 11 0A 00`. L'ampoule clignote, quitte le réseau, et peut être ajoutée de nouveau, ici ou dans l'app. Il n'est pas nécessaire d'être à portée directe de l'ampoule : n'importe quel proxy du réseau convient.
 
-L'ampoule est ensuite retirée de la liste, et de celle des proxys si elle est identifiée. Son appareil disparaît au rechargement.
+L'ampoule est ensuite retirée de la liste, et de celle des proxys si elle est identifiée, puis son appareil disparaît.
 
-Le bouton **Supprimer** standard de l'appareil (⋮ sur la page de l'appareil) fait la même chose, réinitialisation comprise. Si elle échoue, par exemple parce qu'aucun proxy n'est joignable, la suppression est refusée et un message l'explique. Utilisez alors le choix des options en décochant « Réinitialiser l'ampoule ».
+La suppression fonctionne même si l'ampoule est injoignable :
+- **Éteinte ou hors de portée, mais un autre proxy répond** : le message part, mais l'ampoule ne le reçoit pas.
+- **Aucun proxy joignable** : la réinitialisation ne peut pas être envoyée. Une notification Home Assistant vous demande alors de réinitialiser l'ampoule à la main (3 extinctions/rallumages).
+
+Dans les deux cas, l'ampoule reste dans le réseau mesh jusqu'à sa réinitialisation.
 
 Une ampoule ajoutée sans l'app **n'apparaît pas dans l'app Nordlux**. Le cloud la garde à son ancienne adresse si elle y était. N'utilisez donc pas « Mettre à jour depuis mon compte » pour elle : il proposerait cette ancienne adresse. Pour la rendre à l'app, réinitialisez-la, puis ajoutez-la normalement depuis l'app.
 
@@ -134,7 +140,7 @@ Une ampoule ajoutée sans l'app **n'apparaît pas dans l'app Nordlux**. Le cloud
 | Proxys | `AA:BB:CC:DD:EE:FF, 11:22:33:44:55:66` | adresses BLE des nœuds proxy, essayées dans l'ordre. Le bridge Nordlux, en premier, s'est montré le plus fiable. |
 | Ampoules | `Salon = 0x2005` | une ligne par ampoule : nom = adresse unicast |
 
-Les proxys, les ampoules et l'IV index restent modifiables ensuite dans les **options** de l'intégration.
+Ensuite, les ampoules s'ajoutent et se suppriment comme décrit plus haut. Il n'y a plus d'écran pour modifier la liste à la main.
 
 ## Fonctionnement
 
@@ -146,7 +152,7 @@ Les proxys, les ampoules et l'IV index restent modifiables ensuite dans les **op
   | Éteindre | 0 | 15000 | 0 |
   | Luminosité | pourcentage 0–100 | 800 + teinte en % (900 par défaut) | 400 ms |
 
-- **L'état est supposé** (`assumed_state`) : les réponses de l'ampoule ne reflètent pas sa lumière réelle. Home Assistant mémorise donc le dernier état envoyé. Un changement fait depuis l'app Nordlux n'est pas vu par Home Assistant, et inversement.
+- **L'état affiché est le dernier état envoyé** : les réponses de l'ampoule ne reflètent pas sa lumière réelle. Home Assistant mémorise donc la dernière commande, et la restaure au redémarrage. Un changement fait depuis l'app Nordlux n'est pas vu par Home Assistant, et inversement. L'entité s'affiche avec un interrupteur standard.
 - **Anti-rejeu** : chaque message mesh porte un numéro de séquence qui ne doit jamais être réutilisé pour une même adresse source. L'intégration le réserve par blocs et l'enregistre dans le stockage de Home Assistant. Le prochain numéro reprend toujours au-delà du dernier bloc réservé, y compris après un redémarrage. N'utilisez pas la même adresse source dans un autre outil.
 - La connexion au proxy est ouverte à la demande et fermée après 30 s d'inactivité, pour ne pas occuper durablement les connexions limitées d'un proxy ESPHome.
 - Le bridge Nordlux peut rester allumé : il n'annule pas les commandes locales.
