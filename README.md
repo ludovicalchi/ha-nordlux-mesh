@@ -138,6 +138,7 @@ Les proxys, les ampoules et l'IV index restent modifiables ensuite dans les **op
 - **Anti-rejeu** : chaque message mesh porte un numéro de séquence qui ne doit jamais être réutilisé pour une même adresse source. L'intégration le réserve par blocs et l'enregistre dans le stockage de Home Assistant. Le prochain numéro reprend toujours au-delà du dernier bloc réservé, y compris après un redémarrage. N'utilisez pas la même adresse source dans un autre outil.
 - La connexion au proxy est ouverte à la demande et fermée après 30 s d'inactivité, pour ne pas occuper durablement les connexions limitées d'un proxy ESPHome.
 - Le bridge Nordlux peut rester allumé : il n'annule pas les commandes locales.
+- Une ampoule retirée de la liste, ou dont l'adresse a changé, disparaît aussi des appareils au rechargement de l'intégration. Son appareil peut également être supprimé à la main.
 
 ## Avertissement
 
