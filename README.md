@@ -32,10 +32,12 @@ Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, 
        board: esp32dev
        framework:
          type: esp-idf
+       cpu_frequency: 80MHZ     # économie : minimum de l'ESP32 avec Wi-Fi/Bluetooth (240 MHz par défaut)
 
      wifi:
        ssid: !secret wifi_ssid
        password: !secret wifi_password
+       output_power: 13dB       # économie : seulement si le signal est bon (voir ci-dessous)
 
      api:
        encryption:
@@ -48,11 +50,22 @@ Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, 
 
      esp32_ble_tracker:
        scan_parameters:
-         active: true
+         # Économie : écoute 30 ms toutes les 320 ms (~10 %). Sans ces lignes, ESPHome
+         # écoute en continu (100 %). Le scan passif suffit : les annonces Mesh Proxy sont connectables.
+         interval: 320ms
+         window: 30ms
+         active: false
 
      bluetooth_proxy:
        active: true   # indispensable : l'intégration ouvre une connexion GATT
      ```
+
+     **Réglages d'économie d'énergie** (testés sur un ESP32 classique, avec une Candle DIM) : sans eux, le proxy écoute le Bluetooth en permanence, processeur à 240 MHz. Ils ne ralentissent pas le pilotage, car les ampoules s'annoncent plusieurs fois par seconde. Pour revenir en arrière :
+     - si Home Assistant signale une ampoule « non visible », augmentez `window` (par exemple 60 ms, puis 100 ms) ;
+     - si l'ESP32 se déconnecte du Wi-Fi, augmentez `output_power` (15, 17, puis 20 dB) ou supprimez la ligne. Son journal ESPHome indique le signal reçu : vers -70 dBm, ne réduisez plus la puissance ;
+     - si les commandes deviennent lentes, passez `cpu_frequency` à 160MHZ.
+
+     `power_save_mode: HIGH` est déconseillé pour un proxy : il économise peu et risque des déconnexions de Home Assistant. Le mode par défaut, `LIGHT`, suffit.
 3. **Pour la configuration depuis le compte Nordlux** (recommandée) : l'e-mail et le mot de passe du compte, c'est tout. Les ampoules doivent d'abord avoir été ajoutées dans l'app Nordlux.
 4. **Pour la saisie manuelle** : les clés du réseau mesh et les adresses des ampoules. Les outils du dépôt [nordlux-phy-ota](https://github.com/ludovicalchi/nordlux-phy-ota) les récupèrent depuis votre propre compte Nordlux :
    - `tools/nordlux_mesh_keys.py` donne la NetKey, l'AppKey, l'IV index et l'adresse unicast de chaque ampoule ;
