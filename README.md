@@ -2,17 +2,21 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.6.0** : options simplifiées (ajout d'une ampoule réinitialisée, mise à jour depuis le compte) ; suppression par le bouton standard de l'appareil.
+> **Statut : 0.6.0, testée** du 22 au 26/11/2026, dans Home Assistant 2026.11 (Container), via un ESP32 proxy Bluetooth ESPHome, sur une Candle DIM (`nx00626222`, firmware 27.3). Vérifié visuellement dans Home Assistant :
+> - extinction, rallumage et luminosité, avec l'interrupteur standard ;
+> - ajout d'une ampoule réinitialisée sans l'app ;
+> - suppression par le bouton de l'appareil : l'ampoule clignote, quitte le réseau, et son appareil disparaît ;
+> - nettoyage des appareils orphelins ;
+> - mise à jour de la liste depuis le compte Nordlux (compte à une seule maison).
 >
-> **0.5.x** : suppression d'une ampoule avec réinitialisation à distance, testée dans Home Assistant sur une Candle DIM : elle clignote, quitte le réseau, et son appareil disparaît.
+> Les commandes reprennent celles du script de référence du dépôt [nordlux-phy-ota](https://github.com/ludovicalchi/nordlux-phy-ota).
 >
-> **0.4.x** : ajout d'une ampoule réinitialisée sans l'app, testé dans Home Assistant sur une Candle DIM ; nettoyage des appareils orphelins.
->
-> **0.3.0** : l'assistant ne demande plus que l'e-mail et le mot de passe, car les clés d'API de l'app sont intégrées. La lecture du compte avec ces clés a été vérifiée depuis un PC.
->
-> **0.2.0** : ajout de la configuration depuis le compte Nordlux. Testée le 23/11/2026 dans Home Assistant 2026.11, sur un vrai compte à une seule maison : la mise à jour depuis le compte (options de l'intégration) a retrouvé les clés, l'ampoule et les proxys, et l'ampoule répond toujours ensuite. L'ajout initial depuis le compte utilise la même lecture, mais n'a pas été déroulé de bout en bout.
->
-> **0.1.0** : testée le 22/11/2026 dans Home Assistant 2026.11 (Container), via un ESP32 proxy Bluetooth ESPHome, sur une Candle DIM (`nx00626222`, firmware 27.3) : **extinction, rallumage et luminosité validés visuellement**. Les commandes reprennent celles du script de référence du dépôt [nordlux-phy-ota](https://github.com/ludovicalchi/nordlux-phy-ota). Un seul modèle d'ampoule a été testé à ce jour.
+> **Non testé à ce jour :**
+> - les autres modèles d'ampoule ;
+> - la température de couleur ;
+> - l'ajout initial depuis le compte, déroulé de bout en bout ;
+> - la suppression quand aucun proxy n'est joignable ;
+> - un compte à plusieurs maisons.
 
 ## Fonctionnalités
 
