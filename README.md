@@ -2,7 +2,9 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **0.7.0** : lecture de l'état réel des ampoules (Light CTL Get), toutes les 5 minutes. La lecture elle-même a été vérifiée depuis un PC : éteinte, allumée, et après une coupure à l'interrupteur. Son intégration dans Home Assistant n'a pas encore été testée.
+> **Statut : 0.7.0, testée** le 27/11/2026 : lecture de l'état réel des ampoules (Light CTL Get), toutes les 5 minutes.
+> - Une extinction envoyée hors de Home Assistant, depuis un PC, a été affichée à la lecture suivante.
+> - La lecture avait aussi été vérifiée depuis un PC : éteinte, allumée, et après une coupure à l'interrupteur.
 >
 > **0.6.0, testée** du 22 au 26/11/2026, dans Home Assistant 2026.11 (Container), via un ESP32 proxy Bluetooth ESPHome, sur une Candle DIM (`nx00626222`, firmware 27.3). Vérifié visuellement dans Home Assistant :
 > - extinction, rallumage et luminosité, avec l'interrupteur standard ;
