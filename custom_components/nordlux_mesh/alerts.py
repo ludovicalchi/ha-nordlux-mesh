@@ -49,16 +49,26 @@ class ResponseTracker:
                 )
 
     @callback
-    def poll_failed(self, error: Exception) -> None:
-        """Lecture impossible : aucun proxy joignable (on ne sait rien des ampoules)."""
-        self._proxy_failures += 1
-        if self._proxy_failures == UNRESPONSIVE_AFTER:
-            ir.async_create_issue(
-                self.hass, DOMAIN, self._proxy_issue(),
-                is_fixable=False, is_persistent=False, severity=ir.IssueSeverity.WARNING,
-                translation_key="proxies_unreachable",
-                translation_placeholders={"error": str(error)[:300], "minutes": self._minutes()},
-            )
+    def poll_failed(self, names: dict[int, str], error: Exception, bluetooth_available: bool) -> None:
+        """Lecture impossible (aucun nœud mesh joignable).
+
+        - Home Assistant n'a plus aucun adaptateur/proxy Bluetooth connectable (ESP32 hors service) : alerte
+          « proxy », on ne sait rien des ampoules.
+        - Sinon, ce sont les nœuds mesh qui sont injoignables (ex. ampoule éteinte qui était le seul proxy du
+          réseau) : chaque ampoule compte une absence, comme si elle n'avait pas répondu."""
+        if not bluetooth_available:
+            self._proxy_failures += 1
+            if self._proxy_failures == UNRESPONSIVE_AFTER:
+                ir.async_create_issue(
+                    self.hass, DOMAIN, self._proxy_issue(),
+                    is_fixable=False, is_persistent=False, severity=ir.IssueSeverity.WARNING,
+                    translation_key="proxies_unreachable",
+                    translation_placeholders={"error": str(error)[:300], "minutes": self._minutes()},
+                )
+            return
+        self._proxy_failures = 0
+        ir.async_delete_issue(self.hass, DOMAIN, self._proxy_issue())
+        self.poll_ok(names, {unicast: None for unicast in names})
 
 
 @callback

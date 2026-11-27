@@ -119,11 +119,11 @@
   "issues": {
     "light_unresponsive": {
       "title": "L'ampoule Nordlux « {name} » ne répond plus",
-      "description": "L'ampoule « {name} » ({address}) ne répond plus aux lectures d'état depuis environ {minutes} minutes, alors qu'un proxy Bluetooth du réseau mesh est joignable.\n\nVérifiez qu'elle est alimentée (interrupteur mural) et à portée d'un proxy ou d'une autre ampoule Nordlux. Si elle a été réinitialisée ou ajoutée ailleurs (app Nordlux), supprimez-la ici puis ajoutez-la de nouveau.\n\nCette alerte disparaît dès que l'ampoule répond."
+      "description": "L'ampoule « {name} » ({address}) ne répond plus depuis environ {minutes} minutes.\n\nVérifiez qu'elle est alimentée (interrupteur mural) et à portée du proxy Bluetooth ou d'une autre ampoule Nordlux. Si elle a été réinitialisée ou ajoutée ailleurs (app Nordlux), supprimez-la ici puis ajoutez-la de nouveau.\n\nCette alerte disparaît dès que l'ampoule répond."
     },
     "proxies_unreachable": {
-      "title": "Nordlux : aucun proxy Bluetooth joignable",
-      "description": "L'état des ampoules Nordlux n'a pas pu être lu depuis environ {minutes} minutes : aucun proxy de la liste ne répond ({error}).\n\nVérifiez le proxy Bluetooth ESPHome (alimenté, connecté à Home Assistant) et qu'il est à portée d'une ampoule Nordlux ou du bridge.\n\nCette alerte disparaît dès qu'une lecture réussit."
+      "title": "Nordlux : aucun proxy Bluetooth disponible",
+      "description": "Depuis environ {minutes} minutes, Home Assistant n'a plus aucun adaptateur ni proxy Bluetooth connectable : les ampoules Nordlux sont injoignables ({error}).\n\nVérifiez le proxy Bluetooth ESPHome : alimenté, connecté au Wi-Fi et à Home Assistant.\n\nCette alerte disparaît dès qu'une lecture réussit."
     }
   },
   "entity": {

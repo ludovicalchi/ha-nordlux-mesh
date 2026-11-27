@@ -5,7 +5,7 @@ import logging
 import time
 from datetime import timedelta
 
-from homeassistant.components import persistent_notification
+from homeassistant.components import bluetooth, persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -84,7 +84,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> b
         try:
             result = await hub.async_read_lightness(list(names))
         except Exception as err:  # noqa: BLE001
-            tracker.poll_failed(err)
+            tracker.poll_failed(names, err, bluetooth.async_scanner_count(hass, connectable=True) > 0)
             raise UpdateFailed(f"lecture de l'état impossible : {err}") from err
         tracker.poll_ok(names, result)
         now = dt_util.utcnow()

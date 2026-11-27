@@ -193,8 +193,8 @@ Ensuite, les ampoules s'ajoutent et se suppriment comme décrit plus haut. Il n'
 
     Ses attributs donnent l'adresse mesh, la plage de température de couleur du modèle, et le firmware et la pièce connus à l'enregistrement.
 - **Alertes (Paramètres → Réparations)** :
-  - **« L'ampoule … ne répond plus »** : 3 lectures de suite sans réponse alors qu'un proxy est joignable, soit environ 6 minutes. L'ampoule est hors tension, hors de portée, ou a été réinitialisée ou ajoutée ailleurs.
-  - **« Aucun proxy Bluetooth joignable »** : 3 lectures de suite en échec. Le proxy ESPHome est hors service ou trop loin.
+  - **« L'ampoule … ne répond plus »** : 3 lectures de suite sans réponse, soit environ 6 minutes. L'ampoule est hors tension, hors de portée, ou a été réinitialisée ou ajoutée ailleurs. Cela vaut aussi quand l'ampoule éteinte était le seul proxy mesh joignable.
+  - **« Aucun proxy Bluetooth disponible »** : Home Assistant n'a plus aucun adaptateur ni proxy Bluetooth connectable depuis 3 lectures. Le proxy ESPHome est probablement débranché ou déconnecté.
   - Les alertes disparaissent dès la première réponse, et ne sont pas conservées au redémarrage : elles réapparaissent si le problème persiste.
   - L'entité s'affiche avec un interrupteur standard.
 - **Anti-rejeu** : chaque message mesh porte un numéro de séquence qui ne doit jamais être réutilisé pour une même adresse source. L'intégration le réserve par blocs et l'enregistre dans le stockage de Home Assistant. Le prochain numéro reprend toujours au-delà du dernier bloc réservé, y compris après un redémarrage. N'utilisez pas la même adresse source dans un autre outil.

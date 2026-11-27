@@ -119,11 +119,11 @@
   "issues": {
     "light_unresponsive": {
       "title": "Nordlux light « {name} » is not responding",
-      "description": "The light « {name} » ({address}) has not answered the state reads for about {minutes} minutes, although a Bluetooth proxy of the mesh network is reachable.\n\nCheck that it is powered (wall switch) and within range of a proxy or another Nordlux light. If it was reset or added again elsewhere (Nordlux app), remove it here and add it again.\n\nThis alert disappears as soon as the light answers."
+      "description": "The light « {name} » ({address}) has not answered for about {minutes} minutes.\n\nCheck that it is powered (wall switch) and within range of the Bluetooth proxy or of another Nordlux light. If it was reset or added again elsewhere (Nordlux app), remove it here and add it again.\n\nThis alert disappears as soon as the light answers."
     },
     "proxies_unreachable": {
-      "title": "Nordlux: no Bluetooth proxy reachable",
-      "description": "The state of the Nordlux lights could not be read for about {minutes} minutes: no proxy of the list answers ({error}).\n\nCheck the ESPHome Bluetooth proxy (powered, connected to Home Assistant) and that it is within range of a Nordlux light or of the bridge.\n\nThis alert disappears as soon as a read succeeds."
+      "title": "Nordlux: no Bluetooth proxy available",
+      "description": "For about {minutes} minutes, Home Assistant has had no connectable Bluetooth adapter or proxy, so the Nordlux lights cannot be reached ({error}).\n\nCheck the ESPHome Bluetooth proxy: powered, connected to Wi-Fi and to Home Assistant.\n\nThis alert disappears as soon as a read succeeds."
     }
   },
   "entity": {
