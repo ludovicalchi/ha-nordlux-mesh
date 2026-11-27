@@ -2,7 +2,9 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.7.0, testée** le 27/11/2026 : lecture de l'état réel des ampoules (Light CTL Get), toutes les 5 minutes.
+> **Statut : 0.7.1** : lecture de l'état toutes les 2 minutes, au lieu de 5.
+>
+> **0.7.0, testée** le 27/11/2026 : lecture de l'état réel des ampoules (Light CTL Get), toutes les 5 minutes.
 > - Une extinction envoyée hors de Home Assistant, depuis un PC, a été affichée à la lecture suivante.
 > - La lecture avait aussi été vérifiée depuis un PC : éteinte, allumée, et après une coupure à l'interrupteur.
 >
@@ -160,7 +162,7 @@ Ensuite, les ampoules s'ajoutent et se suppriment comme décrit plus haut. Il n'
   | Éteindre | 0 | 15000 | 0 |
   | Luminosité | pourcentage 0–100 | 800 + teinte en % (900 par défaut) | 400 ms |
 
-- **L'état réel est relu** toutes les 5 minutes, et 20 s après le démarrage, sur une seule connexion au proxy pour toutes les ampoules.
+- **L'état réel est relu** toutes les 2 minutes, et 20 s après le démarrage, sur une seule connexion au proxy pour toutes les ampoules.
   - La lecture utilise la *present lightness* de **Light CTL Status** : la luminosité en %, 0 quand l'ampoule est éteinte.
   - Vérifié sur une Candle DIM : 0 éteinte, la valeur envoyée une fois allumée, et la même valeur après une coupure de courant à l'interrupteur.
   - Les statuts standard Generic OnOff et Light Lightness, eux, ne reflètent pas la lumière.
