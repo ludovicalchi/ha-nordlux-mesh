@@ -51,6 +51,14 @@ class CloudLight:
     unicast: int
     mac: str  # AA:BB:CC:DD:EE:FF, ou "" si inconnue
     proxy: bool
+    beacon: str = ""   # type complet, ex. nx00626222
+    version: str = ""  # firmware connu du cloud, ex. 27.3
+    room: str = ""     # nom de la pièce dans l'app
+
+    def meta(self) -> dict[str, str]:
+        """Informations conservées par l'intégration (origine : compte Nordlux)."""
+        return {"source": "cloud", "mac": self.mac, "beacon": self.beacon, "version": self.version,
+                "room": self.room}
 
 
 @dataclass
@@ -62,6 +70,10 @@ class CloudHouse:
     iv_index: int
     lights: list[CloudLight] = field(default_factory=list)
     proxies: list[str] = field(default_factory=list)  # bridges d'abord, puis ampoules proxy
+
+    def meta(self) -> dict[str, dict[str, str]]:
+        """Informations par ampoule, indexées par adresse « 0xNNNN »."""
+        return {f"0x{light.unicast:04X}": light.meta() for light in self.lights}
 
     def devices_text(self) -> str:
         """Format attendu par l'intégration : une ligne « Nom = 0xNNNN » par ampoule."""
@@ -176,6 +188,7 @@ def parse_house(h: dict[str, Any]) -> CloudHouse | None:
     except (ValueError, AttributeError):
         nodes = []
     by_name = {(n.get("name") or "").lower(): n for n in nodes}
+    rooms = {r.get("roomId"): r.get("roomName") or "" for r in h.get("roomList") or []}
 
     house = CloudHouse(str(h.get("houseId")), h.get("houseName") or "Nordlux", netkey, appkey,
                        int(h.get("ivIndex") or 0))
@@ -206,7 +219,10 @@ def parse_house(h: dict[str, Any]) -> CloudHouse | None:
             continue
         if not 0x0001 <= unicast <= 0x7FFF:
             continue
-        house.lights.append(CloudLight(dv.get("deviceName") or "", unicast, mac, is_proxy))
+        house.lights.append(CloudLight(dv.get("deviceName") or "", unicast, mac, is_proxy,
+                                       beacon=str(dv.get("firmwareTypeBeacon") or ""),
+                                       version=str(dv.get("deviceVer") or ""),
+                                       room=rooms.get(dv.get("roomId"), "")))
         if is_proxy and mac:
             light_proxies.append(mac)
     house.proxies = list(dict.fromkeys(bridges + light_proxies))

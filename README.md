@@ -2,7 +2,12 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.7.1, testée** le 27/11/2026 : lecture de l'état toutes les 2 minutes, au lieu de 5.
+> **Statut : 0.8.0** : pas encore testée dans Home Assistant.
+> - Alertes dans Réparations quand une ampoule ne répond plus, ou quand aucun proxy n'est joignable.
+> - Informations sur l'ampoule : modèle, firmware, adresse Bluetooth, pièce Nordlux.
+> - Capteurs de diagnostic : signal Bluetooth, dernière réponse, origine (compte Nordlux ou Home Assistant).
+>
+> **0.7.1, testée** le 27/11/2026 : lecture de l'état toutes les 2 minutes, au lieu de 5.
 > - Un écart entre l'affichage de Home Assistant (20 %) et l'ampoule (44 %) a été corrigé automatiquement à la lecture suivante.
 > - La lecture suit aussi les réglages faits dans l'app Nordlux : 30 % réglé dans l'app, 29 lu.
 >
@@ -170,6 +175,23 @@ Ensuite, les ampoules s'ajoutent et se suppriment comme décrit plus haut. Il n'
   - Les statuts standard Generic OnOff et Light Lightness, eux, ne reflètent pas la lumière.
   - Après une commande, l'affichage change aussitôt, puis la lecture suivante le confirme ou le corrige.
   - Si l'ampoule ne répond pas, le dernier état connu est conservé.
+- **Fiche de l'appareil** :
+  - **Modèle** : nom du catalogue de l'app, par exemple « Candle DIM », avec son type `nx00626222`.
+  - **Firmware et adresse Bluetooth** : lus dans les annonces de l'ampoule, sans connexion, et tenus à jour.
+  - **Pièce Nordlux** : proposée comme zone, pour les ampoules venant du compte.
+- **Capteurs de diagnostic** :
+  - **Signal Bluetooth** : RSSI, avec le proxy qui reçoit l'ampoule.
+  - **Dernière réponse** : heure de la dernière lecture d'état réussie.
+  - **Origine** :
+    - « Compte Nordlux » : ampoule connue du cloud lors de la dernière lecture du compte ;
+    - « Home Assistant » : ampoule ajoutée sans l'app, par Home Assistant ;
+    - « Inconnue » : saisie manuelle.
+
+    Ses attributs donnent l'adresse mesh, la plage de température de couleur du modèle, et le firmware et la pièce connus à l'enregistrement.
+- **Alertes (Paramètres → Réparations)** :
+  - **« L'ampoule … ne répond plus »** : 3 lectures de suite sans réponse alors qu'un proxy est joignable, soit environ 6 minutes. L'ampoule est hors tension, hors de portée, ou a été réinitialisée ou ajoutée ailleurs.
+  - **« Aucun proxy Bluetooth joignable »** : 3 lectures de suite en échec. Le proxy ESPHome est hors service ou trop loin.
+  - Les alertes disparaissent dès la première réponse, et ne sont pas conservées au redémarrage : elles réapparaissent si le problème persiste.
   - L'entité s'affiche avec un interrupteur standard.
 - **Anti-rejeu** : chaque message mesh porte un numéro de séquence qui ne doit jamais être réutilisé pour une même adresse source. L'intégration le réserve par blocs et l'enregistre dans le stockage de Home Assistant. Le prochain numéro reprend toujours au-delà du dernier bloc réservé, y compris après un redémarrage. N'utilisez pas la même adresse source dans un autre outil.
 - La connexion au proxy est ouverte à la demande et fermée après 30 s d'inactivité, pour ne pas occuper durablement les connexions limitées d'un proxy ESPHome.

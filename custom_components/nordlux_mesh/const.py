@@ -7,6 +7,8 @@ CONF_IV_INDEX = "iv_index"
 CONF_SRC = "source_address"
 CONF_PROXIES = "proxies"
 CONF_DEVICES = "devices"
+# Informations par ampoule, indexées par « 0xNNNN » : source (cloud / ha), mac, beacon, version, pièce.
+CONF_META = "meta"
 # Assistant « compte Nordlux » : choix de la maison (l'e-mail et le mot de passe ne sont jamais enregistrés).
 CONF_HOUSE = "house"
 
@@ -22,4 +24,6 @@ SEQ_BLOCK = 64
 # (laisse le temps aux proxys Bluetooth d'être découverts). Chaque lecture ouvre une connexion au proxy.
 STATE_POLL_S = 120
 FIRST_POLL_DELAY_S = 20
+# Alerte (Réparations) après N lectures consécutives sans réponse (ampoule) ou en échec (aucun proxy).
+UNRESPONSIVE_AFTER = 3
 STORAGE_VERSION = 1

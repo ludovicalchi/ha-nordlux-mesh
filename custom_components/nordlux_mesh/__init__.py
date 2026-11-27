@@ -13,11 +13,15 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from homeassistant.util import dt as dt_util
+
+from .alerts import ResponseTracker, async_clear_issues
 from .const import CONF_DEVICES, DOMAIN, FIRST_POLL_DELAY_S, STATE_POLL_S
-from .hub import NordluxMeshHub, async_remove_light, entry_value, parse_devices
+from .hub import NordluxMeshHub, adv_info, async_remove_light, entry_value, parse_devices
+from .nxadd import model_info
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = [Platform.LIGHT]
+PLATFORMS = [Platform.LIGHT, Platform.SENSOR]
 
 type NordluxConfigEntry = ConfigEntry[NordluxMeshHub]
 
@@ -36,25 +40,60 @@ def _is_stale(entry: ConfigEntry, device: dr.DeviceEntry) -> bool:
     return bool(ids) and not ids & _configured_ids(entry)
 
 
+def _async_update_devices(hass: HomeAssistant, entry: ConfigEntry, adv: dict[int, dict]) -> None:
+    """Fiche de l'appareil : modèle, firmware et adresse Bluetooth d'après les annonces de l'ampoule."""
+    registry = dr.async_get(hass)
+    for unicast, a in adv.items():
+        device = registry.async_get_device(identifiers={(DOMAIN, f"{entry.entry_id}_{unicast:04x}")})
+        if device is None:
+            continue
+        changes: dict = {}
+        if a.get("version") and device.sw_version != a["version"]:
+            changes["sw_version"] = a["version"]
+        if (model := model_info(a.get("code"))) is not None:
+            if device.model != model[0]:
+                changes["model"] = model[0]
+            if device.model_id != model[1]:
+                changes["model_id"] = model[1]
+        connection = (dr.CONNECTION_BLUETOOTH, a["mac"])
+        if connection not in device.connections:
+            changes["merge_connections"] = {connection}
+        if changes:
+            registry.async_update_device(device.id, **changes)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> bool:
     hub = NordluxMeshHub(hass, entry)
     await hub.async_setup()
     entry.runtime_data = hub
 
+    try:
+        names = {u: n for n, u in parse_devices(entry_value(entry, CONF_DEVICES, ""))}
+    except ValueError:
+        names = {}
+    # Alertes d'ampoules qui ne sont plus dans la liste : effacées.
+    async_clear_issues(hass, entry.entry_id, keep=set(names))
+    tracker = ResponseTracker(hass, entry)
+
     # Lecture périodique de l'état réel (Light CTL Get) de toutes les ampoules, sur une seule connexion.
     async def _async_update() -> dict:
         # read_at : début de la lecture ; une entité ignore une lecture commencée avant sa dernière commande.
         read_at = time.monotonic()
+        if not names:
+            return {"read_at": read_at, "lightness": {}, "adv": {}, "seen": {}}
         try:
-            unicasts = [u for _, u in parse_devices(entry_value(entry, CONF_DEVICES, ""))]
-        except ValueError:
-            unicasts = []
-        if not unicasts:
-            return {"read_at": read_at, "lightness": {}}
-        try:
-            return {"read_at": read_at, "lightness": await hub.async_read_lightness(unicasts)}
+            result = await hub.async_read_lightness(list(names))
         except Exception as err:  # noqa: BLE001
+            tracker.poll_failed(err)
             raise UpdateFailed(f"lecture de l'état impossible : {err}") from err
+        tracker.poll_ok(names, result)
+        now = dt_util.utcnow()
+        for unicast, value in result.items():
+            if value is not None:
+                hub.last_seen[unicast] = now
+        adv = {u: a for u, a in adv_info(hass).items() if u in names}
+        _async_update_devices(hass, entry, adv)
+        return {"read_at": read_at, "lightness": result, "adv": adv, "seen": dict(hub.last_seen)}
 
     hub.coordinator = DataUpdateCoordinator(
         hass, _LOGGER, config_entry=entry, name=f"{DOMAIN} état",
@@ -117,3 +156,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> 
     if ok:
         await entry.runtime_data.async_close()
     return ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> None:
+    async_clear_issues(hass, entry.entry_id)

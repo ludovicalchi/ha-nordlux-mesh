@@ -16,7 +16,7 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 
 from .const import (
-    CONF_APPKEY, CONF_DEVICES, CONF_IV_INDEX, CONF_NETKEY, CONF_PROXIES, CONF_SRC, DOMAIN,
+    CONF_APPKEY, CONF_DEVICES, CONF_IV_INDEX, CONF_META, CONF_NETKEY, CONF_PROXIES, CONF_SRC, DOMAIN,
     IDLE_DISCONNECT_S, SEQ_BLOCK, STORAGE_VERSION,
 )
 from .mesh import PROXY_SERVICE, MeshNetwork, ProxyLink
@@ -49,13 +49,25 @@ def entry_value(entry: ConfigEntry, key: str, default: Any = None) -> Any:
     return entry.options.get(key, entry.data.get(key, default))
 
 
-def mac_of_unicast(hass: HomeAssistant, unicast: int) -> str | None:
-    """Adresse BLE de l'ampoule qui annonce (données 0x6E78) cette adresse unicast, si elle est visible."""
+def adv_info(hass: HomeAssistant) -> dict[int, dict[str, Any]]:
+    """Ampoules configurées visibles, d'après leurs annonces (données 0x6E78), indexées par adresse unicast :
+    mac, rssi, source (adaptateur ou proxy qui la reçoit), code du modèle, version du firmware."""
+    out: dict[int, dict[str, Any]] = {}
     for si in bluetooth.async_discovered_service_info(hass, connectable=False):
         info = parse_nx_mfr(si.manufacturer_data.get(NX_COMPANY))
-        if info and info["configured"] and info["addr"] == unicast:
-            return si.address.upper()
-    return None
+        if not info or not info["configured"]:
+            continue
+        prev = out.get(info["addr"])
+        if prev is None or si.rssi > prev["rssi"]:
+            out[info["addr"]] = {"mac": si.address.upper(), "rssi": si.rssi, "source": si.source,
+                                 "code": info["beacon"], "version": info["version"]}
+    return out
+
+
+def mac_of_unicast(hass: HomeAssistant, unicast: int) -> str | None:
+    """Adresse BLE de l'ampoule qui annonce (données 0x6E78) cette adresse unicast, si elle est visible."""
+    found = adv_info(hass).get(unicast)
+    return found["mac"] if found else None
 
 
 async def async_remove_light(hass: HomeAssistant, entry: ConfigEntry, unicast: int,
@@ -75,10 +87,13 @@ async def async_remove_light(hass: HomeAssistant, entry: ConfigEntry, unicast: i
     # Une ampoule réinitialisée reste un proxy, mais d'un autre réseau : on la retire des proxys.
     if mac and mac in proxies and len(proxies) > 1:
         proxies.remove(mac)
+    meta = dict(entry_value(entry, CONF_META, {}) or {})
+    meta.pop(f"0x{unicast:04X}", None)
     return {
         CONF_IV_INDEX: entry_value(entry, CONF_IV_INDEX, 0),
         CONF_PROXIES: ", ".join(proxies),
         CONF_DEVICES: "\n".join(f"{n} = 0x{u:04X}" for n, u in devices if u != unicast),
+        CONF_META: meta,
     }, reset_error
 
 
@@ -95,6 +110,7 @@ class NordluxMeshHub:
         self.net: MeshNetwork | None = None
         self.link: ProxyLink | None = None
         self.coordinator: Any = None  # DataUpdateCoordinator de l'état réel, créé dans __init__.py
+        self.last_seen: dict[int, Any] = {}  # adresse unicast -> datetime de la dernière réponse
 
     async def async_setup(self) -> None:
         data = await self._store.async_load() or {}

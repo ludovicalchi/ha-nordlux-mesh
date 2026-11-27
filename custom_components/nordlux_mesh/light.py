@@ -18,13 +18,13 @@ from homeassistant.components.light import (
 )
 from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import NordluxConfigEntry
-from .const import CONF_DEVICES, DOMAIN
+from .const import CONF_DEVICES
+from .entity import light_device_info
 from .hub import NordluxMeshHub, entry_value, parse_devices
 
 DEFAULT_TRANSITION_MS = 400  # valeur utilisée par l'app
@@ -53,12 +53,7 @@ class NordluxLight(CoordinatorEntity, RestoreEntity, LightEntity):
         self._attr_brightness = 255
         self._last_command = 0.0  # time.monotonic() de la dernière commande envoyée
         self._attr_extra_state_attributes = {"mesh_address": f"0x{unicast:04X}"}
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self._attr_unique_id)},
-            name=name,
-            manufacturer="Nordlux",
-            model="Smart Light (Bluetooth Mesh, PHY6222)",
-        )
+        self._attr_device_info = light_device_info(entry, name, unicast)
 
     @property
     def available(self) -> bool:

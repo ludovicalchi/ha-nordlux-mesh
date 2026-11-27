@@ -115,5 +115,33 @@
       "add_failed": "The light could not be added: {error}",
       "no_free_address": "No free address left in 0x7E00–0x7EFF."
     }
+  },
+  "issues": {
+    "light_unresponsive": {
+      "title": "Nordlux light « {name} » is not responding",
+      "description": "The light « {name} » ({address}) has not answered the state reads for about {minutes} minutes, although a Bluetooth proxy of the mesh network is reachable.\n\nCheck that it is powered (wall switch) and within range of a proxy or another Nordlux light. If it was reset or added again elsewhere (Nordlux app), remove it here and add it again.\n\nThis alert disappears as soon as the light answers."
+    },
+    "proxies_unreachable": {
+      "title": "Nordlux: no Bluetooth proxy reachable",
+      "description": "The state of the Nordlux lights could not be read for about {minutes} minutes: no proxy of the list answers ({error}).\n\nCheck the ESPHome Bluetooth proxy (powered, connected to Home Assistant) and that it is within range of a Nordlux light or of the bridge.\n\nThis alert disappears as soon as a read succeeds."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "signal": {
+        "name": "Bluetooth signal"
+      },
+      "last_response": {
+        "name": "Last response"
+      },
+      "origin": {
+        "name": "Origin",
+        "state": {
+          "cloud": "Nordlux account",
+          "home_assistant": "Home Assistant",
+          "unknown": "Unknown"
+        }
+      }
+    }
   }
 }

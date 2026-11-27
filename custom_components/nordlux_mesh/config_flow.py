@@ -22,12 +22,12 @@ from homeassistant.helpers.selector import (
 
 from .cloud import CloudAuthError, CloudError, CloudHouse, NordluxCloud
 from .const import (
-    CONF_APPKEY, CONF_DEVICES, CONF_HOUSE, CONF_IV_INDEX, CONF_NETKEY, CONF_PROXIES, CONF_SRC, DEFAULT_SRC,
-    DOMAIN,
+    CONF_APPKEY, CONF_DEVICES, CONF_HOUSE, CONF_IV_INDEX, CONF_META, CONF_NETKEY, CONF_PROXIES, CONF_SRC,
+    DEFAULT_SRC, DOMAIN,
 )
 from .hub import parse_devices
 from .mesh import k3
-from .nxadd import NX_COMPANY, NX_WRITE, next_free_address, nx_config_messages, parse_nx_mfr
+from .nxadd import NX_COMPANY, NX_WRITE, model_info, next_free_address, nx_config_messages, parse_nx_mfr
 
 _LOGGER = logging.getLogger(__name__)
 CONF_MAC = "mac"
@@ -232,6 +232,7 @@ class NordluxMeshConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_NETKEY: house.netkey,
                     CONF_APPKEY: house.appkey,
                     CONF_SRC: src,
+                    CONF_META: house.meta(),
                 })
                 return self.async_create_entry(title=f"{data[CONF_NAME]} ({self.unique_id})", data=data)
         cur = user_input or {}
@@ -310,7 +311,9 @@ class NordluxMeshOptionsFlow(OptionsFlow):
                 except ValueError:
                     return self.async_abort(reason="no_free_address")
                 name = (user_input.get(CONF_NAME) or "").replace("=", "-").replace("\n", " ").strip()
-                self._add = {"mac": mac, "name": name or "Ampoule Nordlux", "addr": addr}
+                info = found[mac][0]
+                self._add = {"mac": mac, "name": name or "Ampoule Nordlux", "addr": addr,
+                             "code": info["beacon"], "version": info["version"]}
                 self._add_task = None
                 return await self.async_step_add_light_run()
             errors["base"] = "light_gone"
@@ -351,10 +354,17 @@ class NordluxMeshOptionsFlow(OptionsFlow):
         proxies = [m.strip() for m in cur.get(CONF_PROXIES, "").split(",") if m.strip()]
         if self._add["mac"] not in proxies:
             proxies.append(self._add["mac"])  # chaque ampoule est aussi un proxy mesh
+        meta = dict(cur.get(CONF_META) or {})
+        model = model_info(self._add["code"])
+        meta[f"0x{self._add['addr']:04X}"] = {
+            "source": "ha", "mac": self._add["mac"], "beacon": model[1] if model else "",
+            "version": self._add["version"], "room": "",
+        }
         return self.async_create_entry(data={
             CONF_IV_INDEX: cur.get(CONF_IV_INDEX, 0),
             CONF_PROXIES: ", ".join(proxies),
             CONF_DEVICES: devices,
+            CONF_META: meta,
         })
 
     async def async_step_add_light_failed(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -384,6 +394,8 @@ class NordluxMeshOptionsFlow(OptionsFlow):
         if user_input is not None:
             data = _validate_common(user_input, errors)
             if not errors:
+                # Informations du compte pour ses ampoules ; celles ajoutées sans l'app gardent les leurs.
+                data[CONF_META] = {**(self._current().get(CONF_META) or {}), **house.meta()}
                 return self.async_create_entry(data=data)
         cur = user_input or {}
         # Les proxys déjà configurés restent en tête (ordre choisi par l'utilisateur), suivis des nouveaux.
