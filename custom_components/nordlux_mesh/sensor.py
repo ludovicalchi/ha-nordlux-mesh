@@ -23,7 +23,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry,
         entities += [
             NordluxSignalSensor(coordinator, entry, name, unicast),
             NordluxLastResponseSensor(coordinator, entry, name, unicast),
-            NordluxOriginSensor(entry, name, unicast),
+            NordluxOriginSensor(coordinator, entry, name, unicast),
         ]
     async_add_entities(entities)
 
@@ -87,23 +87,46 @@ class NordluxLastResponseSensor(CoordinatorEntity, _Base):
         return True
 
 
-class NordluxOriginSensor(_Base):
-    """Ampoule connue du compte Nordlux (app/cloud) ou ajoutée sans l'app (Home Assistant)."""
+def _cct_range(model: tuple[str, str, int, int]) -> str:
+    return f"{model[2]} K" if model[2] == model[3] else f"{model[2]}–{model[3]} K"
+
+
+class NordluxOriginSensor(CoordinatorEntity, _Base):
+    """Ampoule connue du compte Nordlux (app/cloud) ou ajoutée sans l'app (Home Assistant).
+
+    Attributs : adresse mesh, modèle et plage de température de couleur (enregistrés à l'ajout, sinon
+    déduits des annonces de l'ampoule), firmware et pièce connus à l'enregistrement."""
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_options = [ORIGIN_CLOUD, ORIGIN_HA, ORIGIN_UNKNOWN]
-    _attr_should_poll = False
 
-    def __init__(self, entry, name, unicast) -> None:
+    def __init__(self, coordinator, entry, name, unicast) -> None:
+        super().__init__(coordinator)
         self._setup(entry, name, unicast, "origin")
         self._attr_native_value = light_origin(entry, unicast)
         meta = light_meta(entry, unicast)
-        model = model_info(meta.get("beacon"))
-        attrs = {"mesh_address": f"0x{unicast:04X}"}
-        if model:
-            attrs["color_temperature_range"] = (f"{model[2]} K" if model[2] == model[3]
-                                                else f"{model[2]}–{model[3]} K")
+        attrs: dict[str, str] = {"mesh_address": f"0x{unicast:04X}"}
+        if model := model_info(meta.get("beacon")):
+            attrs["model"] = model[0]
+            attrs["color_temperature_range"] = _cct_range(model)
         if meta.get("version"):
             attrs["firmware_at_registration"] = meta["version"]
         if meta.get("room"):
             attrs["nordlux_room"] = meta["room"]
         self._attr_extra_state_attributes = attrs
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        # Modèle non enregistré à l'ajout (ampoule ajoutée avant la 0.8.0, saisie manuelle) : d'après les annonces.
+        if "color_temperature_range" not in self._attr_extra_state_attributes:
+            adv = ((self.coordinator.data or {}).get("adv") or {}).get(self._unicast)
+            if adv and (model := model_info(adv.get("code"))):
+                self._attr_extra_state_attributes = {
+                    **self._attr_extra_state_attributes,
+                    "model": model[0],
+                    "color_temperature_range": _cct_range(model),
+                }
+        self.async_write_ha_state()
