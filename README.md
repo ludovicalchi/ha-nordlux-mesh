@@ -2,10 +2,14 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.8.0** : pas encore testée dans Home Assistant.
-> - Alertes dans Réparations quand une ampoule ne répond plus, ou quand aucun proxy n'est joignable.
-> - Informations sur l'ampoule : modèle, firmware, adresse Bluetooth, pièce Nordlux.
-> - Capteurs de diagnostic : signal Bluetooth, dernière réponse, origine (compte Nordlux ou Home Assistant).
+> **Statut : 0.8.1, testée** le 27/11/2026 dans Home Assistant, sur une Candle DIM :
+> - **Fiche de l'appareil :** modèle Candle DIM (`nx00626222`), firmware 27.3 et adresse Bluetooth.
+> - **Capteurs de diagnostic :**
+>   - Signal Bluetooth, en dBm, avec le proxy qui reçoit l'ampoule ;
+>   - Dernière réponse ;
+>   - Origine, avec le modèle et la plage de température de couleur, complétés depuis les annonces de l'ampoule.
+>
+> Les alertes dans Réparations (ampoule qui ne répond plus, aucun proxy joignable), ajoutées en 0.8.0, n'ont pas encore été testées.
 >
 > **0.7.1, testée** le 27/11/2026 : lecture de l'état toutes les 2 minutes, au lieu de 5.
 > - Un écart entre l'affichage de Home Assistant (20 %) et l'ampoule (44 %) a été corrigé automatiquement à la lecture suivante.
