@@ -156,8 +156,14 @@ async def run_ota(client, parts: list[Partition], progress: Callable[[float], No
                 end1 = min(off + PKTS_PER_BLOCK * chunk, length)
                 await send_range(data, off, end1)
                 v = await notif(probe_wait, optional=True)
-                if v is not None:
+                if v == R_BLOCK or (v is not None and end1 == length):
                     model, end = "pkt", end1
+                elif v == R_BLOCK_ERR:
+                    # Bloc incomplet : le bootloader attend 16*(MTU-3) octets et signale l'arrêt après ~1 s de
+                    # silence (constaté le 28/11/2026 via l'ESP32). Bloc à renvoyer en entier, sans compter d'erreur.
+                    model = "mtu"
+                    log("modèle de bloc : mtu (bloc incomplet signalé)")
+                    continue
                 else:
                     end = min(off + PKTS_PER_BLOCK * (mtu - 3), length)
                     await send_range(data, end1, end)

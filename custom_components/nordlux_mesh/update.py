@@ -37,6 +37,8 @@ _LOGGER = logging.getLogger(__name__)
 FRESH_S = 15          # une annonce plus ancienne est considérée périmée
 BOOTLOADER_WAIT_S = 60
 BACK_WAIT_S = 120
+OTA_ATTEMPTS = 3
+PACKET_DELAY_S = 0.02  # via un proxy ESPHome (10 ms validés en direct depuis un PC)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry,
@@ -174,16 +176,29 @@ class NordluxFirmwareUpdate(CoordinatorEntity, UpdateEntity):
                     await self._enter_bootloader(mac)
                 else:
                     log("déjà en mode mise à jour (installation précédente interrompue)")
-                device = await self._wait_device(boot, BOOTLOADER_WAIT_S)
-                client = await establish_connection(BleakClientWithServiceCache, device, f"nordlux-ota {boot}",
-                                                    max_attempts=4, use_services_cache=False)
-                try:
-                    await run_ota(client, parts, self._progress, log)
-                finally:
+                # Le bootloader accepte de reprendre l'envoi depuis le début après une erreur ou une coupure
+                # (constaté le 28/11/2026 : erreur GATT 133 au premier essai, puis reprise acceptée).
+                for attempt in range(1, OTA_ATTEMPTS + 1):
+                    device = await self._wait_device(boot, BOOTLOADER_WAIT_S)
                     try:
-                        await client.disconnect()
-                    except Exception:  # noqa: BLE001
-                        pass
+                        client = await establish_connection(
+                            BleakClientWithServiceCache, device, f"nordlux-ota {boot}",
+                            max_attempts=4, use_services_cache=False)
+                        try:
+                            await run_ota(client, parts, self._progress, log, delay=PACKET_DELAY_S)
+                        finally:
+                            try:
+                                await client.disconnect()
+                            except Exception:  # noqa: BLE001
+                                pass
+                        break
+                    except Exception as err:  # noqa: BLE001
+                        if attempt == OTA_ATTEMPTS:
+                            raise
+                        log(f"essai {attempt}/{OTA_ATTEMPTS} interrompu ({err}), reprise depuis le début")
+                        self._attr_update_percentage = None
+                        self.async_write_ha_state()
+                        await asyncio.sleep(3)
             await self._wait_back(mac, log)
         except CloudAuthError as err:  # avant tout contact avec l'ampoule
             raise HomeAssistantError(

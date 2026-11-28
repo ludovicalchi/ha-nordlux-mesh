@@ -2,7 +2,9 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.10.2** : si le cloud refuse les identifiants enregistrés (mot de passe changé dans l'app, par exemple), Home Assistant affiche « Nouvelle authentification requise ». Correction d'un appel déprécié du registre des appareils. Pas encore testée.
+> **Statut : 0.10.3** : correction de l'installation du firmware via un proxy ESPHome. Le premier essai, le 28/11/2026, a échoué sur la détection de la taille des blocs. Le bootloader attend des blocs de 16×(MTU−3) octets. Reprise automatique (3 essais) en cas d'erreur Bluetooth, et paquets espacés de 20 ms. Pas encore testée dans Home Assistant.
+>
+> **0.10.2, démarrage vérifié** : si le cloud refuse les identifiants enregistrés (mot de passe changé dans l'app, par exemple), Home Assistant affiche « Nouvelle authentification requise ». Ce cas n'a pas encore été testé. Correction d'un appel déprécié du registre des appareils.
 >
 > **0.10.1** : mise à jour du firmware depuis Home Assistant. Vérification quotidienne auprès du compte Nordlux, et installation par le proxy Bluetooth.
 > - **Vérification testée** le 28/11/2026 : l'entité « Firmware » affiche « À jour » (27.3, « Bug fixes and improvements. »).
