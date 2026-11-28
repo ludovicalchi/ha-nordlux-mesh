@@ -2,7 +2,7 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.10.7** : plus d'erreur « Invalid handle » à la première tentative de chaque lecture ou commande. Les ampoules décalent leur table Bluetooth (GATT) de 24 handles à chaque connexion : la table n'est donc plus jamais réutilisée depuis le cache. Elle est redécouverte à chaque connexion, ce qui prend environ 1 s, et le cache est vidé à chaque déconnexion. Pas encore testée.
+> **Statut : 0.10.7** : plus d'erreur « Invalid handle » à la première tentative de chaque lecture ou commande. Les ampoules décalent leur table Bluetooth (GATT) de 24 handles à chaque connexion : la table n'est donc plus jamais réutilisée depuis le cache. Elle est redécouverte à chaque connexion, ce qui prend environ 1 s, et le cache est vidé à chaque déconnexion. Testée le 28/11/2026 : c'est efficace tant que la connexion se termine normalement. Si l'ampoule coupe elle-même la connexion (signal faible), le cache de l'ESP32 reste périmé : réglez le proxy ESPHome avec `cache_services: false` (voir le YAML d'exemple). Avec ce réglage, testé le 28/11/2026, toutes les lectures réussissent du premier coup, en 2 à 3,5 s de connexion.
 >
 > **0.10.6, testée** le 28/11/2026 : **flashage depuis Home Assistant réussi via un proxy ESPHome** (ESP32 classique à 80 MHz), sur une Candle DIM restée en mode mise à jour. Un clic sur « Installer » a suffi. L'image 27.3 est passée en 323 s, sans aucun bloc rejeté, à 50 ms entre paquets. L'ampoule est revenue avec ses clés et son adresse, et la réparation a disparu.
 > - Rythme d'envoi adaptatif : via un proxy ESPHome, les écritures sans réponse n'ont aucun contrôle de flux. Envoyés trop vite, environ un paquet tous les 30 ms, 10 à 20 paquets par seconde sont perdus. Le bloc arrive alors incomplet et le bootloader le rejette. L'envoi démarre à 50 ms entre paquets, et cet écart double après chaque bloc rejeté, jusqu'à 250 ms.
@@ -109,7 +109,10 @@ Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, 
 
      bluetooth_proxy:
        active: true   # indispensable : l'intégration ouvre une connexion GATT
+       cache_services: false   # recommandé : les ampoules décalent leur table GATT à chaque connexion
      ```
+
+     **`cache_services: false`** : les ampoules Nordlux décalent leur table Bluetooth (GATT) à chaque connexion. Une table gardée en cache par l'ESP32, ce que fait ESPHome par défaut, est donc toujours périmée. La connexion échoue alors sur « Invalid handle », puis réussit à la deuxième tentative, une fois le cache vidé. Sans cache, l'ESP32 redécouvre la table à chaque connexion, en environ 2 s.
 
      **Réglages d'économie d'énergie** (testés sur un ESP32 classique, avec une Candle DIM) : sans eux, le proxy écoute le Bluetooth en permanence, processeur à 240 MHz. Ils ne ralentissent pas le pilotage, car les ampoules s'annoncent plusieurs fois par seconde. Pour revenir en arrière :
      - si Home Assistant signale une ampoule « non visible », augmentez `window` (par exemple 60 ms, puis 100 ms) ;
