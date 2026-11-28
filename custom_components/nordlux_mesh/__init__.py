@@ -10,18 +10,21 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from homeassistant.util import dt as dt_util
 
 from .alerts import ResponseTracker, async_clear_issues
-from .const import CONF_DEVICES, DOMAIN, FIRST_POLL_DELAY_S, STATE_POLL_S
+from .const import (
+    CONF_DEVICES, DOMAIN, FIRMWARE_CHECK_HOURS, FIRST_FIRMWARE_CHECK_S, FIRST_POLL_DELAY_S, STATE_POLL_S,
+)
+from .fwmanager import FirmwareManager
 from .hub import NordluxMeshHub, adv_info, async_remove_light, entry_value, parse_devices
 from .nxadd import model_info
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = [Platform.LIGHT, Platform.SENSOR]
+PLATFORMS = [Platform.LIGHT, Platform.SENSOR, Platform.UPDATE]
 
 type NordluxConfigEntry = ConfigEntry[NordluxMeshHub]
 
@@ -107,6 +110,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> b
         await hub.coordinator.async_refresh()
 
     entry.async_on_unload(async_call_later(hass, FIRST_POLL_DELAY_S, _async_first_poll))
+
+    # Firmware : dernières versions publiées, vérifiées une fois par jour si les identifiants sont enregistrés.
+    hub.firmware = FirmwareManager(hass, entry)
+    await hub.firmware.async_load()
+
+    async def _async_check_firmware(_now) -> None:
+        await hub.firmware.async_check()
+
+    entry.async_on_unload(async_call_later(hass, FIRST_FIRMWARE_CHECK_S, _async_check_firmware))
+    entry.async_on_unload(async_track_time_interval(hass, _async_check_firmware,
+                                                    timedelta(hours=FIRMWARE_CHECK_HOURS)))
     # Appareils d'ampoules retirées de la liste (changement d'adresse, ampoule supprimée) : on les retire.
     registry = dr.async_get(hass)
     for device in dr.async_entries_for_config_entry(registry, entry.entry_id):

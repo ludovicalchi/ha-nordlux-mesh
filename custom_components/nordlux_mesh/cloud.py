@@ -156,6 +156,35 @@ class NordluxCloud:
         self._auth = dict(APP, token=d["token"], accountId=d.get("accountId"), uniqueIndication=uniq)
         self._last_house = d.get("lastHouse")
 
+    async def ota_info(self, beacons: list[str]) -> dict[str, dict[str, str]]:
+        """Dernier firmware publié par type (getOTAInfo) : version, url (signée, valable ~100 h), md5,
+        nom de fichier, description. Nécessite login()."""
+        if self._auth is None:
+            raise CloudError("non connecté")
+        j = await self._post("smartLight/api/ota/getOTAInfo", dict(
+            self._auth, languageCode="en", deviceList=[{"deviceTypeBeacon": b} for b in beacons]))
+        if not j.get("isSuccess"):
+            raise CloudError(str(j.get("msg") or j.get("message") or "getOTAInfo refusé"))
+        out: dict[str, dict[str, str]] = {}
+        for it in (j.get("data") or {}).get("deviceList") or []:
+            if it.get("deviceTypeBeacon") and it.get("lastVersion"):
+                out[it["deviceTypeBeacon"]] = {
+                    "version": str(it["lastVersion"]), "url": it.get("lastVersionURL") or "",
+                    "md5": (it.get("lastVersionMD5") or "").lower(),
+                    "filename": it.get("lastVersionFileName") or "",
+                    "description": it.get("lastVersionDescription") or "",
+                }
+        return out
+
+    async def download(self, url: str) -> bytes:
+        try:
+            async with self._session.get(url, headers={"User-Agent": UA},
+                                         timeout=aiohttp.ClientTimeout(total=120)) as r:
+                r.raise_for_status()
+                return await r.read()
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise CloudError(f"téléchargement impossible : {err}") from err
+
     async def houses(self) -> list[CloudHouse]:
         if self._auth is None:
             raise CloudError("non connecté")

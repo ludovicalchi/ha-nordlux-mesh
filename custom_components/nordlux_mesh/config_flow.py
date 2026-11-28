@@ -31,6 +31,7 @@ from .nxadd import NX_COMPANY, NX_WRITE, model_info, next_free_address, nx_confi
 
 _LOGGER = logging.getLogger(__name__)
 CONF_MAC = "mac"
+CONF_FORGET = "forget"
 VERIFY_TIMEOUT_S = 45
 
 
@@ -296,7 +297,43 @@ class NordluxMeshOptionsFlow(OptionsFlow):
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         # Suppression : bouton « Supprimer » de l'appareil (réinitialisation à distance, cf. __init__.py).
-        return self.async_show_menu(step_id="init", menu_options=["add_light", "cloud"])
+        return self.async_show_menu(step_id="init", menu_options=["add_light", "cloud", "firmware"])
+
+    # --- Mises à jour du firmware : identifiants du compte, enregistrés pour la vérification quotidienne
+    async def async_step_firmware(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        data = self.config_entry.data
+        if user_input is not None:
+            if user_input.get(CONF_FORGET):
+                new_data = {k: v for k, v in data.items() if k not in (CONF_EMAIL, CONF_PASSWORD)}
+                self.hass.config_entries.async_update_entry(self.config_entry, data=new_data)
+                return self.async_create_entry(data=dict(self.config_entry.options))
+            email = (user_input.get(CONF_EMAIL) or "").strip()
+            password = user_input.get(CONF_PASSWORD) or data.get(CONF_PASSWORD, "")
+            if not email or not password:
+                errors["base"] = "invalid_auth"
+            else:
+                try:
+                    api = NordluxCloud(async_get_clientsession(self.hass), clock=dt_util.now)
+                    await api.login(email, password)
+                except CloudAuthError:
+                    errors["base"] = "invalid_auth"
+                except CloudError:
+                    errors["base"] = "cannot_connect"
+                else:
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry, data={**data, CONF_EMAIL: email, CONF_PASSWORD: password})
+                    # Rechargement (écouteur) : vérification des mises à jour une minute plus tard.
+                    return self.async_create_entry(data=dict(self.config_entry.options))
+        schema = vol.Schema({
+            vol.Optional(CONF_EMAIL, default=data.get(CONF_EMAIL, "")): _EMAIL,
+            vol.Optional(CONF_PASSWORD): _PASSWORD,
+            vol.Optional(CONF_FORGET, default=False): bool,
+        })
+        return self.async_show_form(
+            step_id="firmware", data_schema=schema, errors=errors,
+            description_placeholders={"state": "✔" if data.get(CONF_PASSWORD) else "✘"},
+        )
 
     # --- Ajout d'une ampoule réinitialisée, sans l'app
     async def async_step_add_light(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:

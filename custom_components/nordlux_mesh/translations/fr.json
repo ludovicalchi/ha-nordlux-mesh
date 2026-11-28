@@ -68,7 +68,8 @@
         "title": "Réseau mesh Nordlux Smart",
         "menu_options": {
           "add_light": "Ajouter une ampoule Nordlux réinitialisée (sans l'app)",
-          "cloud": "Mettre à jour depuis mon compte Nordlux (nouvelles ampoules)"
+          "cloud": "Mettre à jour depuis mon compte Nordlux (nouvelles ampoules)",
+          "firmware": "Mises à jour du firmware (compte Nordlux)"
         }
       },
       "cloud": {
@@ -94,6 +95,15 @@
         "data": {
           "mac": "Ampoule",
           "name": "Nom"
+        }
+      },
+      "firmware": {
+        "title": "Mises à jour du firmware",
+        "description": "Identifiants enregistrés : {state}\n\nPour savoir si un firmware plus récent est publié, l'intégration se connecte à votre compte Nordlux une fois par jour, en lecture seule. L'e-mail et le mot de passe sont enregistrés dans Home Assistant (non chiffrés, comme les identifiants des autres intégrations). L'installation se fait ensuite depuis l'entité de mise à jour « Firmware » de chaque ampoule.",
+        "data": {
+          "email": "E-mail du compte Nordlux",
+          "password": "Mot de passe (laisser vide pour garder celui enregistré)",
+          "forget": "Oublier les identifiants enregistrés"
         }
       }
     },
@@ -137,6 +147,11 @@
           "home_assistant": "Home Assistant",
           "unknown": "Inconnue"
         }
+      }
+    },
+    "update": {
+      "firmware": {
+        "name": "Firmware"
       }
     }
   }

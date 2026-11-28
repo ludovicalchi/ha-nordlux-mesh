@@ -68,7 +68,8 @@
         "title": "Nordlux Smart mesh network",
         "menu_options": {
           "add_light": "Add a reset Nordlux light (without the app)",
-          "cloud": "Update from my Nordlux account (new lights)"
+          "cloud": "Update from my Nordlux account (new lights)",
+          "firmware": "Firmware updates (Nordlux account)"
         }
       },
       "cloud": {
@@ -94,6 +95,15 @@
         "data": {
           "mac": "Light",
           "name": "Name"
+        }
+      },
+      "firmware": {
+        "title": "Firmware updates",
+        "description": "Credentials saved: {state}\n\nTo know whether a newer firmware is published, the integration logs in to your Nordlux account once a day (read-only). The email and password are stored in Home Assistant (unencrypted, like other integration credentials). Installation is then done from each light's « Firmware » update entity.",
+        "data": {
+          "email": "Email of the Nordlux account",
+          "password": "Password (leave empty to keep the saved one)",
+          "forget": "Forget the saved credentials"
         }
       }
     },
@@ -137,6 +147,11 @@
           "home_assistant": "Home Assistant",
           "unknown": "Unknown"
         }
+      }
+    },
+    "update": {
+      "firmware": {
+        "name": "Firmware"
       }
     }
   }

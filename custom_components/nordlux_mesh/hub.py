@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
+from contextlib import asynccontextmanager
 from typing import Any
 
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
@@ -160,6 +161,16 @@ class NordluxMeshHub:
             _LOGGER.debug("Connecté au proxy mesh %s", mac)
             return client
         raise HomeAssistantError("Aucun proxy Nordlux joignable (" + " ; ".join(errors or ["aucun proxy configuré"]) + ")")
+
+    @asynccontextmanager
+    async def exclusive(self):
+        """Accès exclusif au Bluetooth (mise à jour du firmware) : lien proxy fermé, commandes et lectures
+        en attente jusqu'à la fin."""
+        async with self._lock:
+            self._cancel_idle()
+            if self.link:
+                await self.link.close()
+            yield
 
     async def async_read_lightness(self, unicasts: list[int]) -> dict[int, int | None]:
         """Luminosité réelle (%) de chaque ampoule, sur une seule connexion ; None si pas de réponse."""

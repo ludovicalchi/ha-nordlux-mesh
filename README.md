@@ -2,7 +2,11 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.9.0** : une ampoule injoignable devient « Indisponible », au lieu de l'alerte « ne répond plus » ; l'alerte « Aucun proxy Bluetooth disponible » est conservée. Pas encore testée dans Home Assistant.
+> **Statut : 0.10.0** : mise à jour du firmware depuis Home Assistant. Vérification quotidienne auprès du compte Nordlux, et installation par le proxy Bluetooth.
+> - Passage en mode mise à jour et flashage validés le 28/11/2026 depuis un PC sur une Candle DIM : 194 s, clés et adresse conservées.
+> - L'installation depuis Home Assistant, à travers un proxy ESPHome, n'a pas encore été testée.
+>
+> **0.9.0, testée** : une ampoule injoignable devient « Indisponible », au lieu de l'alerte « ne répond plus » ; l'alerte « Aucun proxy Bluetooth disponible » est conservée.
 >
 > **0.8.2** : alertes testées dans Home Assistant (ampoule coupée à l'interrupteur, perte du proxy).
 >
@@ -196,6 +200,16 @@ Ensuite, les ampoules s'ajoutent et se suppriment comme décrit plus haut. Il n'
     - « Inconnue » : saisie manuelle.
 
     Ses attributs donnent l'adresse mesh, la plage de température de couleur du modèle, et le firmware et la pièce connus à l'enregistrement.
+- **Mise à jour du firmware** : une entité « Firmware » par ampoule, l'entité de mise à jour standard de Home Assistant.
+  - **Vérification** : avec les identifiants enregistrés via Configurer → **Mises à jour du firmware (compte Nordlux)**, l'intégration demande au cloud, une fois par jour, la dernière version publiée pour chaque modèle (`getOTAInfo`). Le mot de passe est enregistré dans Home Assistant.
+  - **Installation** : le bouton « Installer » affiche une barre de progression et se déroule en 4 étapes.
+    1. Téléchargement de l'image, vérifiée par son MD5.
+    2. Passage de l'ampoule en mode mise à jour : `01 02` sur le service OTA Phyplus.
+    3. Flashage par le proxy Bluetooth, en paquets de 20 octets.
+    4. Redémarrage. L'ampoule garde ses clés et son adresse.
+  - **Durée** : environ 3 à 4 minutes en direct depuis un PC. Elle peut être plus longue via un proxy ESPHome.
+  - **En cas d'échec** : l'ampoule reste en mode mise à jour, éteinte. Relancez l'installation : l'intégration détecte ce mode et reprend le flashage.
+  - **Réinstaller la même version** : action `update.install`, avec `version` égale à la version publiée.
 - **Ampoule injoignable** : après 3 lectures de suite sans réponse, soit environ 6 minutes, l'ampoule devient **« Indisponible »**, comme une entité Zigbee. Elle redevient disponible à la première réponse.
   - Causes possibles : hors tension, hors de portée, ou réinitialisée ou ajoutée ailleurs.
   - Cela vaut aussi quand l'ampoule éteinte était le seul proxy mesh joignable.

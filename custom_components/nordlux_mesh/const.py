@@ -26,4 +26,7 @@ STATE_POLL_S = 120
 FIRST_POLL_DELAY_S = 20
 # Alerte (Réparations) après N lectures consécutives sans réponse (ampoule) ou en échec (aucun proxy).
 UNRESPONSIVE_AFTER = 3
+# Firmware : vérification auprès du compte Nordlux (identifiants enregistrés dans l'entrée).
+FIRMWARE_CHECK_HOURS = 24
+FIRST_FIRMWARE_CHECK_S = 60
 STORAGE_VERSION = 1
