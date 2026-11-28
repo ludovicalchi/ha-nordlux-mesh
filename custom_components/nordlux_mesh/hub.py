@@ -150,7 +150,10 @@ class NordluxMeshHub:
                 errors.append(f"{mac} : non visible")
                 continue
             try:
-                client = await establish_connection(BleakClientWithServiceCache, device, f"nordlux {mac}", max_attempts=3)
+                # Jamais de table GATT mémorisée : les ampoules Nordlux décalent leurs handles à chaque
+                # connexion (+24 : 66, 90, 114… constaté le 28/11/2026), toute table en cache est périmée.
+                client = await establish_connection(BleakClientWithServiceCache, device, f"nordlux {mac}",
+                                                    max_attempts=3, use_services_cache=False)
             except Exception as err:  # noqa: BLE001
                 errors.append(f"{mac} : {err}")
                 continue
@@ -170,7 +173,7 @@ class NordluxMeshHub:
         async with self._lock:
             self._cancel_idle()
             if self.link:
-                await self.link.close()
+                await self.link.close(clear_cache=True)
             yield
 
     async def async_read_lightness(self, unicasts: list[int]) -> dict[int, int | None]:
@@ -212,9 +215,11 @@ class NordluxMeshHub:
         self._idle_unsub = None
         async with self._lock:
             if self.link:
-                await self.link.close()
+                # Cache vidé à chaque déconnexion (Home Assistant et cache flash de l'ESP32) : la prochaine
+                # connexion redécouvre les services au lieu d'échouer sur « Invalid handle ».
+                await self.link.close(clear_cache=True)
 
     async def async_close(self) -> None:
         self._cancel_idle()
         if self.link:
-            await self.link.close()
+            await self.link.close(clear_cache=True)

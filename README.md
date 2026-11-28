@@ -2,7 +2,9 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.10.6, testée** le 28/11/2026 : **flashage depuis Home Assistant réussi via un proxy ESPHome** (ESP32 classique à 80 MHz), sur une Candle DIM restée en mode mise à jour. Un clic sur « Installer » a suffi. L'image 27.3 est passée en 323 s, sans aucun bloc rejeté, à 50 ms entre paquets. L'ampoule est revenue avec ses clés et son adresse, et la réparation a disparu.
+> **Statut : 0.10.7** : plus d'erreur « Invalid handle » à la première tentative de chaque lecture ou commande. Les ampoules décalent leur table Bluetooth (GATT) de 24 handles à chaque connexion : la table n'est donc plus jamais réutilisée depuis le cache. Elle est redécouverte à chaque connexion, ce qui prend environ 1 s, et le cache est vidé à chaque déconnexion. Pas encore testée.
+>
+> **0.10.6, testée** le 28/11/2026 : **flashage depuis Home Assistant réussi via un proxy ESPHome** (ESP32 classique à 80 MHz), sur une Candle DIM restée en mode mise à jour. Un clic sur « Installer » a suffi. L'image 27.3 est passée en 323 s, sans aucun bloc rejeté, à 50 ms entre paquets. L'ampoule est revenue avec ses clés et son adresse, et la réparation a disparu.
 > - Rythme d'envoi adaptatif : via un proxy ESPHome, les écritures sans réponse n'ont aucun contrôle de flux. Envoyés trop vite, environ un paquet tous les 30 ms, 10 à 20 paquets par seconde sont perdus. Le bloc arrive alors incomplet et le bootloader le rejette. L'envoi démarre à 50 ms entre paquets, et cet écart double après chaque bloc rejeté, jusqu'à 250 ms.
 > - Pas encore testé : la mise à jour d'une ampoule en fonctionnement normal vers une version plus récente, faute de nouvelle version publiée. Le passage en mode mise à jour a toutefois été validé depuis Home Assistant au premier essai de la 0.10.2.
 >
