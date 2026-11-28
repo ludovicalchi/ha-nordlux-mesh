@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
 
 from .const import CONF_META, DOMAIN
@@ -17,6 +19,23 @@ ORIGIN_UNKNOWN = "unknown"
 
 def light_meta(entry: ConfigEntry, unicast: int) -> dict[str, Any]:
     return dict((entry_value(entry, CONF_META, {}) or {}).get(f"0x{unicast:04X}") or {})
+
+
+def registry_device(hass: HomeAssistant, entry: ConfigEntry, unicast: int) -> dr.DeviceEntry | None:
+    """Fiche de l'ampoule dans le registre des appareils. Elle garde la MAC (connexion Bluetooth), le modèle
+    (model_id = nx…6222) et le firmware vus dans les annonces, même quand l'ampoule n'annonce plus rien
+    (bootloader, redémarrage de Home Assistant)."""
+    ident = f"{entry.entry_id}_{unicast:04x}"
+    for device in dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id):
+        if (DOMAIN, ident) in device.identifiers:
+            return device
+    return None
+
+
+def registry_mac(device: dr.DeviceEntry | None) -> str | None:
+    if device is None:
+        return None
+    return next((value for kind, value in device.connections if kind == CONNECTION_BLUETOOTH), None)
 
 
 def light_origin(entry: ConfigEntry, unicast: int) -> str:

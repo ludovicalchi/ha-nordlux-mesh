@@ -27,7 +27,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import NordluxConfigEntry
 from .cloud import CloudAuthError, CloudError
 from .const import CONF_DEVICES
-from .entity import light_device_info, light_meta
+from .entity import light_device_info, light_meta, registry_device, registry_mac
 from .fwmanager import light_beacon
 from .firmware import ENTER_BOOTLOADER, OTA_CMD, OTA_DATA, OTA_SERVICE, OTAError, ota_mac, parse_hex, run_ota
 from .hub import entry_value, parse_devices
@@ -75,22 +75,26 @@ class NordluxFirmwareUpdate(CoordinatorEntity, UpdateEntity):
         return self.coordinator.data or {}
 
     def _beacon(self) -> str | None:
-        return light_beacon(self._entry, self._unicast, self._data())
+        return light_beacon(self._entry, self._unicast, self._data(), self.hass)
 
     def _mac(self) -> str | None:
         adv = (self._data().get("adv") or {}).get(self._unicast)
-        return (adv or {}).get("mac") or light_meta(self._entry, self._unicast).get("mac") or None
+        return ((adv or {}).get("mac") or light_meta(self._entry, self._unicast).get("mac")
+                or registry_mac(registry_device(self.hass, self._entry, self._unicast)) or None)
 
     @property
     def available(self) -> bool:
-        if self._attr_in_progress:
-            return True
-        return self._unicast not in (self._data().get("unresponsive") or set())
+        # Toujours disponible : une ampoule restée en mode mise à jour ne répond plus au mesh, et c'est
+        # justement depuis cette entité qu'on relance l'installation (HA ignore les entités indisponibles).
+        return True
 
     @property
     def installed_version(self) -> str | None:
         adv = (self._data().get("adv") or {}).get(self._unicast)
-        return (adv or {}).get("version") or light_meta(self._entry, self._unicast).get("version") or None
+        if version := (adv or {}).get("version") or light_meta(self._entry, self._unicast).get("version"):
+            return version
+        device = registry_device(self.hass, self._entry, self._unicast)
+        return device.sw_version if device else None
 
     @property
     def latest_version(self) -> str | None:

@@ -18,7 +18,7 @@ from homeassistant.util import dt as dt_util
 
 from .cloud import CloudAuthError, CloudError, NordluxCloud
 from .const import CONF_DEVICES, DOMAIN
-from .entity import light_meta
+from .entity import light_meta, registry_device
 from .hub import entry_value, parse_devices
 from .nxadd import model_info
 
@@ -54,7 +54,7 @@ class FirmwareManager:
         data = self.entry.runtime_data.coordinator.data or {}
         out = set()
         for _, unicast in parse_devices(entry_value(self.entry, CONF_DEVICES, "")):
-            if beacon := light_beacon(self.entry, unicast, data):
+            if beacon := light_beacon(self.entry, unicast, data, self.hass):
                 out.add(beacon)
         return sorted(out)
 
@@ -106,11 +106,15 @@ class FirmwareManager:
         return info["version"], image
 
 
-def light_beacon(entry: ConfigEntry, unicast: int, data: dict) -> str | None:
+def light_beacon(entry: ConfigEntry, unicast: int, data: dict, hass: HomeAssistant | None = None) -> str | None:
+    """Type (nx…6222) : enregistré à l'ajout, sinon annonces, sinon fiche de l'appareil (model_id)."""
     meta = light_meta(entry, unicast)
     if model := model_info(meta.get("beacon")):
         return model[1]
     adv = (data.get("adv") or {}).get(unicast)
     if adv and (model := model_info(adv.get("code"))):
         return model[1]
+    if hass is not None and (device := registry_device(hass, entry, unicast)) is not None:
+        if model := model_info(device.model_id):
+            return model[1]
     return None
