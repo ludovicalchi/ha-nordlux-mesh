@@ -43,7 +43,11 @@ OTA_ATTEMPTS = 3
 
 def _version_tuple(version: str) -> tuple[int, ...]:
     return tuple(int(x) for x in version.split("."))
-PACKET_DELAY_S = 0.02  # via un proxy ESPHome (10 ms validés en direct depuis un PC)
+# Via un proxy ESPHome : rythme adaptatif (10 ms suffisent en direct depuis un PC ; à ~30 ms, l'ESP32 perd
+# 10 à 20 paquets par seconde). Doublé après chaque bloc rejeté, jusqu'au maximum.
+PACKET_DELAY_S = 0.05
+PACKET_DELAY_MAX_S = 0.25
+BLOCK_RETRIES = 8
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry,
@@ -226,7 +230,8 @@ class NordluxFirmwareUpdate(CoordinatorEntity, UpdateEntity):
                             BleakClientWithServiceCache, device, f"nordlux-ota {boot}",
                             max_attempts=4, use_services_cache=False)
                         try:
-                            await run_ota(client, parts, self._progress, log, delay=PACKET_DELAY_S)
+                            await run_ota(client, parts, self._progress, log, retries=BLOCK_RETRIES,
+                                          delay=PACKET_DELAY_S, max_delay=PACKET_DELAY_MAX_S)
                         finally:
                             try:
                                 await client.disconnect()

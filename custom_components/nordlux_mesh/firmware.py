@@ -106,8 +106,13 @@ def plan(parts: list[Partition]) -> list[tuple[int, bytes]]:
 
 async def run_ota(client, parts: list[Partition], progress: Callable[[float], None],
                   log: Callable[[str], None], timeout: float = 10, part_timeout: float = 25,
-                  retries: int = 3, delay: float = 0.01) -> float:
-    """Flashe `parts` sur un client bleak (ou équivalent) connecté au bootloader. Renvoie la durée (s)."""
+                  retries: int = 3, delay: float = 0.01, max_delay: float | None = None) -> float:
+    """Flashe `parts` sur un client bleak (ou équivalent) connecté au bootloader. Renvoie la durée (s).
+
+    `max_delay` : rythme adaptatif. Après chaque bloc rejeté, l'écart entre paquets double, jusqu'à cette
+    limite. Via un proxy ESPHome, les écritures sans réponse n'ont aucun contrôle de flux : trop rapides, la
+    file Bluetooth de l'ESP32 déborde (« status=143 » congestion, « write_char failed ») et des paquets sont
+    perdus, d'où un bloc incomplet (68 87). Constaté le 28/11/2026 : 10 à 20 pertes par seconde à ~30 ms."""
     svc = client.services.get_service(OTA_SERVICE)
     if svc is None or any(svc.get_characteristic(u) is None for u in (OTA_CMD, OTA_NOTIFY, OTA_DATA)):
         raise OTAError("service OTA du bootloader introuvable")
@@ -121,7 +126,7 @@ async def run_ota(client, parts: list[Partition], progress: Callable[[float], No
     queue: asyncio.Queue[bytes] = asyncio.Queue()
     await client.start_notify(OTA_NOTIFY, lambda _h, d: queue.put_nowait(bytes(d)))
     await asyncio.sleep(0.3)
-    log(f"bootloader : MTU {mtu}, paquets de {chunk} o, blocs de {block} o")
+    log(f"bootloader : MTU {mtu}, paquets de {chunk} o, blocs de {block} o, {delay * 1000:.0f} ms entre paquets")
 
     async def notif(wait: float, optional: bool = False) -> bytes | None:
         try:
@@ -138,11 +143,13 @@ async def run_ota(client, parts: list[Partition], progress: Callable[[float], No
         if v != want:
             raise OTAError(f"réponse inattendue {v.hex(' ')} (attendu {want.hex(' ')})")
 
+    pace = delay
+
     async def send_range(data: bytes, a: int, b: int) -> None:
         for k in range(a, b, chunk):
             await client.write_gatt_char(OTA_DATA, data[k:min(k + chunk, b)], response=False)
-            if delay:
-                await asyncio.sleep(delay)
+            if pace:
+                await asyncio.sleep(pace)
 
     total = sum(len(p.data) for p in parts)
     sent, t0 = 0, time.monotonic()
@@ -164,9 +171,14 @@ async def run_ota(client, parts: list[Partition], progress: Callable[[float], No
                 off, err = end, 0
             elif v == R_BLOCK_ERR:
                 err += 1
-                log(f"bloc à l'offset {off} rejeté, renvoi {err}/{retries}")
+                if max_delay is not None and pace < max_delay:
+                    pace = min(max_delay, max(pace * 2, 0.02))
+                log(f"bloc à l'offset {off} rejeté, renvoi {err}/{retries}"
+                    + (f", {pace * 1000:.0f} ms entre paquets" if max_delay is not None else ""))
                 if err > retries:
                     raise OTAError("trop d'erreurs sur un bloc")
+                if max_delay is not None:
+                    await asyncio.sleep(0.5)  # laisse la file du proxy se vider avant de renvoyer le bloc
             elif v == R_PART_DONE and last:
                 sent += end - off
                 off, part_done = end, True

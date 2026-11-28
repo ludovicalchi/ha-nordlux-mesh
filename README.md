@@ -2,9 +2,10 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.10.5** : flashage par blocs de 16×(MTU−3) octets dès le départ, comme depuis le PC. L'essai d'un bloc plus court faisait rejeter tous les blocs suivants par le bootloader. L'installation tourne en tâche de fond : fermer le navigateur ne la coupe plus.
+> **Statut : 0.10.6** : rythme d'envoi adaptatif pour le flashage via un proxy ESPHome. Les écritures sans réponse n'y ont aucun contrôle de flux : envoyés trop vite, environ un paquet tous les 30 ms, 10 à 20 paquets par seconde sont perdus. Le bloc arrive alors incomplet et le bootloader le rejette. L'envoi démarre à 50 ms entre paquets, et cet écart double après chaque bloc rejeté, jusqu'à 250 ms. Comptez de 6 à 20 minutes. Pas encore testée.
+>
+> **0.10.5, réparation vérifiée** (réparation « bloquée en mode mise à jour » et bouton « Installer » affichés le 28/11/2026 ; le flashage échouait encore à cause des pertes de paquets) : flashage par blocs de 16×(MTU−3) octets dès le départ, comme depuis le PC. L'essai d'un bloc plus court faisait rejeter tous les blocs suivants par le bootloader. L'installation tourne en tâche de fond : fermer le navigateur ne la coupe plus.
 > - **Ampoule bloquée en mode mise à jour** (mise à jour interrompue, ampoule éteinte) : elle est détectée à chaque lecture, grâce à l'annonce du bootloader. Une réparation « … est bloquée en mode mise à jour » apparaît dans Paramètres → Réparations. L'entité « Firmware » affiche « mode mise à jour » avec le bouton « Installer » : un clic reflashe le dernier firmware publié. Sans identifiants Nordlux enregistrés, la réparation indique d'abord comment les saisir.
-> - Pas encore testée.
 >
 > **0.10.4, vérifiée** : une ampoule restée en mode mise à jour, et donc sans annonce mesh, peut être réparée depuis Home Assistant, même après un redémarrage. Son adresse Bluetooth, son modèle et son firmware sont repris de la fiche de l'appareil, et l'entité « Firmware » reste toujours disponible.
 >
