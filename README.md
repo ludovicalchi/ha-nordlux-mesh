@@ -2,7 +2,9 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.10.8** : l'intégration a désormais une icône. Elle est fournie dans `custom_components/nordlux_mesh/brand/`, une possibilité offerte depuis Home Assistant 2026.3. Elle apparaît dans la liste des intégrations, et devant l'entité « Firmware ». C'est une icône originale, sans rapport avec le logo de Nordlux : l'intégration n'est pas officielle. Pas encore testée.
+> **Statut : 0.10.9** : l'entité « Firmware » affiche l'icône standard des mises à jour de Home Assistant, qui change selon l'état (à jour, mise à jour disponible, installation), au lieu du logo de l'intégration. Pas encore testée.
+>
+> **0.10.8** : l'intégration a désormais une icône. Elle est fournie dans `custom_components/nordlux_mesh/brand/`, une possibilité offerte depuis Home Assistant 2026.3. Elle apparaît dans la liste des intégrations, et devant l'entité « Firmware ». C'est une icône originale, sans rapport avec le logo de Nordlux : l'intégration n'est pas officielle. Testée le 28/11/2026 dans Home Assistant 2026.11 : l'icône s'affiche aux deux endroits.
 >
 > **0.10.7** : plus d'erreur « Invalid handle » à la première tentative de chaque lecture ou commande. Les ampoules décalent leur table Bluetooth (GATT) de 24 handles à chaque connexion : la table n'est donc plus jamais réutilisée depuis le cache. Elle est redécouverte à chaque connexion, ce qui prend environ 1 s, et le cache est vidé à chaque déconnexion. Testée le 28/11/2026 : c'est efficace tant que la connexion se termine normalement. Si l'ampoule coupe elle-même la connexion (signal faible), le cache de l'ESP32 reste périmé : réglez le proxy ESPHome avec `cache_services: false` (voir le YAML d'exemple). Avec ce réglage, testé le 28/11/2026, toutes les lectures réussissent du premier coup, en 2 à 3,5 s de connexion.
 >

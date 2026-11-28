@@ -122,6 +122,12 @@ class NordluxFirmwareUpdate(CoordinatorEntity, UpdateEntity):
         info = self._hub.firmware.latest.get(beacon) if beacon else None
         return (info or {}).get("description") or None
 
+    @property
+    def entity_picture(self) -> str | None:
+        # Pas le logo de l'intégration (choix par défaut des entités de mise à jour) : l'icône standard de
+        # Home Assistant, qui change selon l'état (à jour / mise à jour disponible / installation).
+        return None
+
     def version_is_newer(self, latest_version: str, installed_version: str) -> bool:
         if installed_version == BOOTLOADER_VERSION:
             return True
