@@ -38,6 +38,13 @@ def registry_mac(device: dr.DeviceEntry | None) -> str | None:
     return next((value for kind, value in device.connections if kind == CONNECTION_BLUETOOTH), None)
 
 
+def light_mac(hass: HomeAssistant, entry: ConfigEntry, unicast: int, data: dict) -> str | None:
+    """Adresse Bluetooth : annonces récentes, sinon enregistrée à l'ajout, sinon fiche de l'appareil."""
+    adv = (data.get("adv") or {}).get(unicast)
+    return ((adv or {}).get("mac") or light_meta(entry, unicast).get("mac")
+            or registry_mac(registry_device(hass, entry, unicast)) or None)
+
+
 def light_origin(entry: ConfigEntry, unicast: int) -> str:
     """Compte Nordlux (ampoule connue du cloud à la dernière lecture du compte), ajoutée sans l'app, ou inconnue."""
     source = light_meta(entry, unicast).get("source")

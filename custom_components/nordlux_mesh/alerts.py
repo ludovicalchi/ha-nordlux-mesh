@@ -64,6 +64,24 @@ class ResponseTracker:
 
 
 @callback
+def async_update_bootloader_issues(hass: HomeAssistant, entry: ConfigEntry, names: dict[int, str],
+                                   bootloader: set[int], has_credentials: bool) -> None:
+    """Alerte « ampoule bloquée en mode mise à jour » (firmware incomplet) : créée tant que le bootloader
+    s'annonce, effacée dès que l'ampoule revient en fonctionnement normal."""
+    for unicast, name in names.items():
+        issue_id = f"bootloader_{entry.entry_id}_{unicast:04x}"
+        if unicast not in bootloader:
+            ir.async_delete_issue(hass, DOMAIN, issue_id)
+            continue
+        ir.async_create_issue(
+            hass, DOMAIN, issue_id,
+            is_fixable=False, is_persistent=False, severity=ir.IssueSeverity.ERROR,
+            translation_key="bulb_in_bootloader" if has_credentials else "bulb_in_bootloader_no_credentials",
+            translation_placeholders={"name": name, "address": f"0x{unicast:04X}"},
+        )
+
+
+@callback
 def async_clear_issues(hass: HomeAssistant, entry_id: str) -> None:
     """Efface les alertes de cette entrée (y compris les anciennes alertes « ampoule muette » de la 0.8.x)."""
     registry = ir.async_get(hass)

@@ -112,6 +112,7 @@ class NordluxMeshHub:
         self.link: ProxyLink | None = None
         self.coordinator: Any = None  # DataUpdateCoordinator de l'état réel, créé dans __init__.py
         self.last_seen: dict[int, Any] = {}  # adresse unicast -> datetime de la dernière réponse
+        self.ota_running: set[int] = set()  # ampoules en cours de flashage (pas d'alerte « mode mise à jour »)
 
     async def async_setup(self) -> None:
         data = await self._store.async_load() or {}

@@ -15,11 +15,11 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from homeassistant.util import dt as dt_util
 
-from .alerts import ResponseTracker, async_clear_issues
+from .alerts import ResponseTracker, async_clear_issues, async_update_bootloader_issues
 from .const import (
     CONF_DEVICES, DOMAIN, FIRMWARE_CHECK_HOURS, FIRST_FIRMWARE_CHECK_S, FIRST_POLL_DELAY_S, STATE_POLL_S,
 )
-from .fwmanager import FirmwareManager
+from .fwmanager import FirmwareManager, bootloader_unicasts
 from .hub import NordluxMeshHub, adv_info, async_remove_light, entry_value, parse_devices
 from .nxadd import model_info
 
@@ -81,11 +81,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> b
     tracker = ResponseTracker(hass, entry)
 
     # Lecture périodique de l'état réel (Light CTL Get) de toutes les ampoules, sur une seule connexion.
+    def _bootloader(adv: dict) -> set[int]:
+        """Ampoules restées en mode mise à jour (hors flashage en cours) : alerte Réparations + bouton
+        « Installer » sur leur entité Firmware."""
+        found = bootloader_unicasts(hass, entry, list(names), {"adv": adv}) - hub.ota_running
+        async_update_bootloader_issues(hass, entry, names, found, hub.firmware.has_credentials)
+        return found
+
     async def _async_update() -> dict:
         # read_at : début de la lecture ; une entité ignore une lecture commencée avant sa dernière commande.
         read_at = time.monotonic()
         if not names:
-            return {"read_at": read_at, "lightness": {}, "adv": {}, "seen": {}, "unresponsive": set()}
+            return {"read_at": read_at, "lightness": {}, "adv": {}, "seen": {}, "unresponsive": set(),
+                    "bootloader": set()}
         try:
             result = await hub.async_read_lightness(list(names))
         except Exception as err:  # noqa: BLE001
@@ -93,7 +101,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> b
             # Pas d'UpdateFailed : les entités doivent recevoir la liste des ampoules devenues indisponibles.
             _LOGGER.debug("Lecture de l'état impossible : %s", err)
             return {"read_at": read_at, "lightness": {}, "adv": {}, "seen": dict(hub.last_seen),
-                    "unresponsive": tracker.unresponsive()}
+                    "unresponsive": tracker.unresponsive(), "bootloader": _bootloader({})}
         tracker.poll_ok(result)
         now = dt_util.utcnow()
         for unicast, value in result.items():
@@ -102,7 +110,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> b
         adv = {u: a for u, a in adv_info(hass).items() if u in names}
         _async_update_devices(hass, entry, adv)
         return {"read_at": read_at, "lightness": result, "adv": adv, "seen": dict(hub.last_seen),
-                "unresponsive": tracker.unresponsive()}
+                "unresponsive": tracker.unresponsive(), "bootloader": _bootloader(adv)}
 
     hub.coordinator = DataUpdateCoordinator(
         hass, _LOGGER, config_entry=entry, name=f"{DOMAIN} état",

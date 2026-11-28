@@ -139,6 +139,14 @@
     "proxies_unreachable": {
       "title": "Nordlux : aucun proxy Bluetooth disponible",
       "description": "Depuis environ {minutes} minutes, Home Assistant n'a plus aucun adaptateur ni proxy Bluetooth connectable : les ampoules Nordlux sont injoignables ({error}).\n\nVérifiez le proxy Bluetooth ESPHome : alimenté, connecté au Wi-Fi et à Home Assistant.\n\nCette alerte disparaît dès qu'une lecture réussit."
+    },
+    "bulb_in_bootloader": {
+      "title": "Nordlux : « {name} » est bloquée en mode mise à jour",
+      "description": "L'ampoule « {name} » ({address}) annonce son bootloader de mise à jour au lieu de son firmware normal : une mise à jour précédente a été interrompue. L'ampoule reste donc éteinte et ne répond plus.\n\nPour la réparer, ouvrez son entité « Firmware » (fiche de l'appareil, ou Paramètres → Mises à jour) et cliquez sur « Installer » : le dernier firmware publié est téléchargé puis flashé par le proxy Bluetooth (environ 5 minutes ; gardez le proxy près de l'ampoule).\n\nCette alerte disparaît dès que l'ampoule revient en fonctionnement normal."
+    },
+    "bulb_in_bootloader_no_credentials": {
+      "title": "Nordlux : « {name} » est bloquée en mode mise à jour",
+      "description": "L'ampoule « {name} » ({address}) annonce son bootloader de mise à jour au lieu de son firmware normal : une mise à jour précédente a été interrompue. L'ampoule reste donc éteinte et ne répond plus.\n\nPour la réparer, le firmware doit être téléchargé depuis le compte Nordlux : enregistrez d'abord vos identifiants dans Configurer → « Mises à jour du firmware (compte Nordlux) », puis, une minute plus tard environ, cliquez sur « Installer » dans l'entité « Firmware » de l'ampoule.\n\nCette alerte disparaît dès que l'ampoule revient en fonctionnement normal."
     }
   },
   "entity": {

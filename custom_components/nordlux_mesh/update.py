@@ -27,7 +27,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import NordluxConfigEntry
 from .cloud import CloudAuthError, CloudError
 from .const import CONF_DEVICES
-from .entity import light_device_info, light_meta, registry_device, registry_mac
+from .entity import light_device_info, light_mac, light_meta, registry_device
 from .fwmanager import light_beacon
 from .firmware import ENTER_BOOTLOADER, OTA_CMD, OTA_DATA, OTA_SERVICE, OTAError, ota_mac, parse_hex, run_ota
 from .hub import entry_value, parse_devices
@@ -37,7 +37,12 @@ _LOGGER = logging.getLogger(__name__)
 FRESH_S = 15          # une annonce plus ancienne est considérée périmée
 BOOTLOADER_WAIT_S = 60
 BACK_WAIT_S = 120
+BOOTLOADER_VERSION = "mode mise à jour"
 OTA_ATTEMPTS = 3
+
+
+def _version_tuple(version: str) -> tuple[int, ...]:
+    return tuple(int(x) for x in version.split("."))
 PACKET_DELAY_S = 0.02  # via un proxy ESPHome (10 ms validés en direct depuis un PC)
 
 
@@ -65,6 +70,7 @@ class NordluxFirmwareUpdate(CoordinatorEntity, UpdateEntity):
         self._attr_device_info = light_device_info(entry, name, unicast)
         self._attr_in_progress = False
         self._attr_update_percentage = None
+        self._install_task: asyncio.Task | None = None
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -78,9 +84,10 @@ class NordluxFirmwareUpdate(CoordinatorEntity, UpdateEntity):
         return light_beacon(self._entry, self._unicast, self._data(), self.hass)
 
     def _mac(self) -> str | None:
-        adv = (self._data().get("adv") or {}).get(self._unicast)
-        return ((adv or {}).get("mac") or light_meta(self._entry, self._unicast).get("mac")
-                or registry_mac(registry_device(self.hass, self._entry, self._unicast)) or None)
+        return light_mac(self.hass, self._entry, self._unicast, self._data())
+
+    def _in_bootloader(self) -> bool:
+        return self._unicast in (self._data().get("bootloader") or set())
 
     @property
     def available(self) -> bool:
@@ -90,6 +97,9 @@ class NordluxFirmwareUpdate(CoordinatorEntity, UpdateEntity):
 
     @property
     def installed_version(self) -> str | None:
+        if self._in_bootloader():
+            # Firmware incomplet : « mise à jour disponible », pour afficher le bouton « Installer ».
+            return BOOTLOADER_VERSION
         adv = (self._data().get("adv") or {}).get(self._unicast)
         if version := (adv or {}).get("version") or light_meta(self._entry, self._unicast).get("version"):
             return version
@@ -107,6 +117,14 @@ class NordluxFirmwareUpdate(CoordinatorEntity, UpdateEntity):
         beacon = self._beacon()
         info = self._hub.firmware.latest.get(beacon) if beacon else None
         return (info or {}).get("description") or None
+
+    def version_is_newer(self, latest_version: str, installed_version: str) -> bool:
+        if installed_version == BOOTLOADER_VERSION:
+            return True
+        try:
+            return _version_tuple(latest_version) > _version_tuple(installed_version)
+        except ValueError:
+            return latest_version != installed_version
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -165,6 +183,25 @@ class NordluxFirmwareUpdate(CoordinatorEntity, UpdateEntity):
         latest = self.latest_version
         if version and latest and version != latest:
             raise HomeAssistantError(f"Seule la dernière version publiée ({latest}) peut être installée.")
+        # Flashage en tâche de fond : si l'appelant abandonne (navigateur fermé, délai d'un client dépassé),
+        # l'installation continue au lieu d'être coupée en plein milieu (constaté le 28/11/2026).
+        if self._install_task is None or self._install_task.done():
+            self._install_task = self._entry.async_create_background_task(
+                self.hass, self._async_run_install(beacon, mac), f"nordlux_mesh firmware 0x{self._unicast:04X}")
+        await asyncio.shield(self._install_task)
+
+    async def _async_run_install(self, beacon: str, mac: str) -> None:
+        self._hub.ota_running.add(self._unicast)
+        try:
+            await self._async_flash(beacon, mac)
+        except HomeAssistantError as err:
+            # Journalisé ici aussi : l'appelant a pu abandonner, l'erreur ne lui parviendrait pas.
+            _LOGGER.error("Firmware 0x%04X : %s", self._unicast, err)
+            raise
+        finally:
+            self._hub.ota_running.discard(self._unicast)
+
+    async def _async_flash(self, beacon: str, mac: str) -> None:
         self._attr_in_progress = True
         self._attr_update_percentage = None
         self.async_write_ha_state()
@@ -211,6 +248,8 @@ class NordluxFirmwareUpdate(CoordinatorEntity, UpdateEntity):
         except CloudError as err:  # téléchargement : l'ampoule n'a pas encore été touchée
             raise HomeAssistantError(
                 f"Téléchargement du firmware impossible : {err}. L'ampoule n'a pas été modifiée.") from err
+        except HomeAssistantError:
+            raise
         except OTAError as err:
             raise HomeAssistantError(
                 f"Mise à jour impossible : {err}. Si l'ampoule ne se rallume pas, relancez l'installation : "

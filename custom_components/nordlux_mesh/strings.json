@@ -139,6 +139,14 @@
     "proxies_unreachable": {
       "title": "Nordlux: no Bluetooth proxy available",
       "description": "For about {minutes} minutes, Home Assistant has had no connectable Bluetooth adapter or proxy, so the Nordlux lights cannot be reached ({error}).\n\nCheck the ESPHome Bluetooth proxy: powered, connected to Wi-Fi and to Home Assistant.\n\nThis alert disappears as soon as a read succeeds."
+    },
+    "bulb_in_bootloader": {
+      "title": "Nordlux: « {name} » is stuck in update mode",
+      "description": "The light « {name} » ({address}) is advertising its update bootloader instead of its normal firmware: an earlier firmware update was interrupted, so the light stays off and does not respond.\n\nTo repair it, open its « Firmware » entity (device page or Settings → Updates) and click « Install »: the latest published firmware is downloaded and flashed through the Bluetooth proxy (about 5 minutes; keep the proxy close to the light).\n\nThis alert disappears as soon as the light is back to normal operation."
+    },
+    "bulb_in_bootloader_no_credentials": {
+      "title": "Nordlux: « {name} » is stuck in update mode",
+      "description": "The light « {name} » ({address}) is advertising its update bootloader instead of its normal firmware: an earlier firmware update was interrupted, so the light stays off and does not respond.\n\nTo repair it, the firmware must be downloaded from the Nordlux account: first save your credentials in Configure → « Firmware updates (Nordlux account) », then, about one minute later, click « Install » on the light's « Firmware » entity.\n\nThis alert disappears as soon as the light is back to normal operation."
     }
   },
   "entity": {

@@ -5,7 +5,7 @@ Repris de tools/phy_ota.py (ampoule récupérée le 21/11/2026, reflashée le 28
   - passage au bootloader : écriture SANS réponse de « 01 02 » sur ff02 (service 5833ff01, présent en
     fonctionnement normal sans ff04) ; le bootloader s'annonce à la MAC + 1 (octet de poids faible) ;
   - ff02 (écriture) : 01 <nb_partitions> 00 -> 00 81 ; 02 <idx> <flash LE32> <run LE32> <len LE32> <crc16> -> 00 84 ;
-  - ff04 (sans réponse) : paquets de 20 octets ; bloc = 16*(MTU-3) octets (ou 16 paquets) -> 00 87 ;
+  - ff04 (sans réponse) : paquets de 20 octets ; bloc = 16*(MTU-3) octets -> 00 87 ;
     fin de partition 00 85 ; fin d'OTA 00 83 ; 68 87 = bloc à renvoyer ;
   - ff02 : 04 01 (ou 04) = redémarrage -> 00 8a.
 Les paquets de 237 ou 197 octets bloquent le bootloader : toujours 20 octets.
@@ -106,7 +106,7 @@ def plan(parts: list[Partition]) -> list[tuple[int, bytes]]:
 
 async def run_ota(client, parts: list[Partition], progress: Callable[[float], None],
                   log: Callable[[str], None], timeout: float = 10, part_timeout: float = 25,
-                  probe_wait: float = 2.5, retries: int = 3, delay: float = 0.01) -> float:
+                  retries: int = 3, delay: float = 0.01) -> float:
     """Flashe `parts` sur un client bleak (ou équivalent) connecté au bootloader. Renvoie la durée (s)."""
     svc = client.services.get_service(OTA_SERVICE)
     if svc is None or any(svc.get_characteristic(u) is None for u in (OTA_CMD, OTA_NOTIFY, OTA_DATA)):
@@ -114,11 +114,14 @@ async def run_ota(client, parts: list[Partition], progress: Callable[[float], No
     mtu = getattr(client, "mtu_size", 23) or 23
     chunk = min(CHUNK, mtu - 3)
     quick = mtu > 23
-    model = "pkt" if chunk == mtu - 3 else None  # sinon détecté sur le premier bloc
+    # Bloc acquitté (00 87) tous les 16*(MTU-3) octets, quelle que soit la taille des paquets : validé depuis
+    # le PC (21 et 28/11/2026). Ne pas « sonder » avec un bloc plus court : le bootloader signale un bloc
+    # incomplet (68 87) après ~1 s de silence, puis rejette tous les blocs suivants (constaté via l'ESP32).
+    block = PKTS_PER_BLOCK * (mtu - 3)
     queue: asyncio.Queue[bytes] = asyncio.Queue()
     await client.start_notify(OTA_NOTIFY, lambda _h, d: queue.put_nowait(bytes(d)))
     await asyncio.sleep(0.3)
-    log(f"bootloader : MTU {mtu}, paquets de {chunk} o")
+    log(f"bootloader : MTU {mtu}, paquets de {chunk} o, blocs de {block} o")
 
     async def notif(wait: float, optional: bool = False) -> bytes | None:
         try:
@@ -152,28 +155,9 @@ async def run_ota(client, parts: list[Partition], progress: Callable[[float], No
         data, length = p.data, len(p.data)
         off, err, part_done = 0, 0, False
         while off < length:
-            if model is None:
-                end1 = min(off + PKTS_PER_BLOCK * chunk, length)
-                await send_range(data, off, end1)
-                v = await notif(probe_wait, optional=True)
-                if v == R_BLOCK or (v is not None and end1 == length):
-                    model, end = "pkt", end1
-                elif v == R_BLOCK_ERR:
-                    # Bloc incomplet : le bootloader attend 16*(MTU-3) octets et signale l'arrêt après ~1 s de
-                    # silence (constaté le 28/11/2026 via l'ESP32). Bloc à renvoyer en entier, sans compter d'erreur.
-                    model = "mtu"
-                    log("modèle de bloc : mtu (bloc incomplet signalé)")
-                    continue
-                else:
-                    end = min(off + PKTS_PER_BLOCK * (mtu - 3), length)
-                    await send_range(data, end1, end)
-                    v = await notif(timeout)
-                    model = "mtu"
-                log(f"modèle de bloc : {model}")
-            else:
-                end = min(off + PKTS_PER_BLOCK * (chunk if model == "pkt" else mtu - 3), length)
-                await send_range(data, off, end)
-                v = await notif(timeout)
+            end = min(off + block, length)
+            await send_range(data, off, end)
+            v = await notif(timeout)
             last = end == length
             if v == R_BLOCK:
                 sent += end - off

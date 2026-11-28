@@ -6,9 +6,12 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
+import time
 from collections.abc import Callable
 from typing import Any
 
+from homeassistant.components import bluetooth
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
@@ -18,11 +21,15 @@ from homeassistant.util import dt as dt_util
 
 from .cloud import CloudAuthError, CloudError, NordluxCloud
 from .const import CONF_DEVICES, DOMAIN
-from .entity import light_meta, registry_device
+from .entity import light_mac, light_meta, registry_device
+from .firmware import ota_mac
 from .hub import entry_value, parse_devices
 from .nxadd import model_info
 
 _LOGGER = logging.getLogger(__name__)
+PHYPLUS_COMPANY = 0x0504
+_BOOTLOADER_NAME = re.compile(r"^nx[0-9a-f]{4}v\d+$", re.IGNORECASE)
+BOOTLOADER_SEEN_S = 60
 
 
 class FirmwareManager:
@@ -104,6 +111,22 @@ class FirmwareManager:
         if info.get("md5") and hashlib.md5(image).hexdigest() != info["md5"]:
             raise CloudError("MD5 du firmware téléchargé incorrect")
         return info["version"], image
+
+
+def bootloader_unicasts(hass: HomeAssistant, entry: ConfigEntry, unicasts: list[int], data: dict) -> set[int]:
+    """Ampoules restées en mode mise à jour : le bootloader s'annonce à la MAC + 1 (« nx0062v1 », société
+    0x0504 PHYPLUS) ; en fonctionnement normal, cette adresse n'émet jamais."""
+    out: set[int] = set()
+    for unicast in unicasts:
+        if not (mac := light_mac(hass, entry, unicast, data)):
+            continue
+        si = bluetooth.async_last_service_info(hass, ota_mac(mac), connectable=False)
+        # si.time : horloge monotone de habluetooth (cf. update.py) ; le bootloader annonce toutes les 250 ms.
+        if si is None or time.monotonic() - si.time > BOOTLOADER_SEEN_S:
+            continue
+        if PHYPLUS_COMPANY in si.manufacturer_data or _BOOTLOADER_NAME.match(si.name or ""):
+            out.add(unicast)
+    return out
 
 
 def light_beacon(entry: ConfigEntry, unicast: int, data: dict, hass: HomeAssistant | None = None) -> str | None:
