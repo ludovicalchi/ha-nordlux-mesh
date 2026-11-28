@@ -2,7 +2,7 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.10.9** : l'entité « Firmware » affiche l'icône standard des mises à jour de Home Assistant, qui change selon l'état (à jour, mise à jour disponible, installation), au lieu du logo de l'intégration. Pas encore testée.
+> **Statut : 0.10.9** : l'entité « Firmware » affiche l'icône standard des mises à jour de Home Assistant, qui change selon l'état (à jour, mise à jour disponible, installation), au lieu du logo de l'intégration. Testée le 28/11/2026.
 >
 > **0.10.8** : l'intégration a désormais une icône. Elle est fournie dans `custom_components/nordlux_mesh/brand/`, une possibilité offerte depuis Home Assistant 2026.3. Elle apparaît dans la liste des intégrations, et devant l'entité « Firmware ». C'est une icône originale, sans rapport avec le logo de Nordlux : l'intégration n'est pas officielle. Testée le 28/11/2026 dans Home Assistant 2026.11 : l'icône s'affiche aux deux endroits.
 >
