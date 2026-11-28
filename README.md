@@ -2,7 +2,10 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.10.0** : mise à jour du firmware depuis Home Assistant. Vérification quotidienne auprès du compte Nordlux, et installation par le proxy Bluetooth.
+> **Statut : 0.10.2** : si le cloud refuse les identifiants enregistrés (mot de passe changé dans l'app, par exemple), Home Assistant affiche « Nouvelle authentification requise ». Correction d'un appel déprécié du registre des appareils. Pas encore testée.
+>
+> **0.10.1** : mise à jour du firmware depuis Home Assistant. Vérification quotidienne auprès du compte Nordlux, et installation par le proxy Bluetooth.
+> - **Vérification testée** le 28/11/2026 : l'entité « Firmware » affiche « À jour » (27.3, « Bug fixes and improvements. »).
 > - Passage en mode mise à jour et flashage validés le 28/11/2026 depuis un PC sur une Candle DIM : 194 s, clés et adresse conservées.
 > - L'installation depuis Home Assistant, à travers un proxy ESPHome, n'a pas encore été testée.
 >
@@ -202,6 +205,7 @@ Ensuite, les ampoules s'ajoutent et se suppriment comme décrit plus haut. Il n'
     Ses attributs donnent l'adresse mesh, la plage de température de couleur du modèle, et le firmware et la pièce connus à l'enregistrement.
 - **Mise à jour du firmware** : une entité « Firmware » par ampoule, l'entité de mise à jour standard de Home Assistant.
   - **Vérification** : avec les identifiants enregistrés via Configurer → **Mises à jour du firmware (compte Nordlux)**, l'intégration demande au cloud, une fois par jour, la dernière version publiée pour chaque modèle (`getOTAInfo`). Le mot de passe est enregistré dans Home Assistant.
+  - **Identifiants refusés** (mot de passe modifié dans l'app, par exemple) : Home Assistant affiche « Nouvelle authentification requise ». On saisit le nouveau mot de passe, et la vérification reprend environ une minute plus tard. Le pilotage des ampoules n'est pas concerné. Une coupure réseau ou un cloud indisponible ne déclenche pas cette demande : seulement un avertissement dans les journaux.
   - **Installation** : le bouton « Installer » affiche une barre de progression et se déroule en 4 étapes.
     1. Téléchargement de l'image, vérifiée par son MD5.
     2. Passage de l'ampoule en mode mise à jour : `01 02` sur le service OTA Phyplus.

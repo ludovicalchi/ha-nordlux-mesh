@@ -46,8 +46,11 @@ def _is_stale(entry: ConfigEntry, device: dr.DeviceEntry) -> bool:
 def _async_update_devices(hass: HomeAssistant, entry: ConfigEntry, adv: dict[int, dict]) -> None:
     """Fiche de l'appareil : modèle, firmware et adresse Bluetooth d'après les annonces de l'ampoule."""
     registry = dr.async_get(hass)
+    # Appareils de cette entrée, par identifiant (async_get_device est déprécié : identifiants non uniques).
+    by_id = {ident: device for device in dr.async_entries_for_config_entry(registry, entry.entry_id)
+             for domain, ident in device.identifiers if domain == DOMAIN}
     for unicast, a in adv.items():
-        device = registry.async_get_device(identifiers={(DOMAIN, f"{entry.entry_id}_{unicast:04x}")})
+        device = by_id.get(f"{entry.entry_id}_{unicast:04x}")
         if device is None:
             continue
         changes: dict = {}

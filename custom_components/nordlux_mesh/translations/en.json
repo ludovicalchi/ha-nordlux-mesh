@@ -1,6 +1,14 @@
 {
   "config": {
     "step": {
+      "reauth_confirm": {
+        "title": "Nordlux account",
+        "description": "The Nordlux cloud refused the stored credentials (password changed in the app?). Enter them again to keep checking for firmware updates. Controlling the lights does not depend on them.",
+        "data": {
+          "email": "Email of the Nordlux account",
+          "password": "Password"
+        }
+      },
       "user": {
         "title": "Nordlux Smart mesh network",
         "description": "How do you want to configure the mesh network?",
@@ -59,7 +67,8 @@
       "no_lights": "No light with a mesh address was found on this account."
     },
     "abort": {
-      "already_configured": "This mesh network is already configured. To add new lights, use the integration options."
+      "already_configured": "This mesh network is already configured. To add new lights, use the integration options.",
+      "reauth_successful": "Credentials updated. Firmware updates will be checked again in about one minute."
     }
   },
   "options": {

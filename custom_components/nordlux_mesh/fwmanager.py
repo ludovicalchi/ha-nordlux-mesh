@@ -16,7 +16,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .cloud import CloudError, NordluxCloud
+from .cloud import CloudAuthError, CloudError, NordluxCloud
 from .const import CONF_DEVICES, DOMAIN
 from .entity import light_meta
 from .hub import entry_value, parse_devices
@@ -62,15 +62,28 @@ class FirmwareManager:
         if not self.has_credentials:
             raise CloudError("identifiants Nordlux non enregistrés (Configurer → Mises à jour du firmware)")
         api = NordluxCloud(async_get_clientsession(self.hass), clock=dt_util.now)
-        await api.login(self.entry.data[CONF_EMAIL], self.entry.data[CONF_PASSWORD])
+        try:
+            await api.login(self.entry.data[CONF_EMAIL], self.entry.data[CONF_PASSWORD])
+        except CloudAuthError:
+            # Mot de passe modifié dans l'app, par exemple : notification « Nouvelle authentification requise ».
+            # Sans doublon si une demande est déjà ouverte ; l'intégration reste chargée.
+            self.entry.async_start_reauth(self.hass)
+            raise
         return api
 
     async def async_check(self) -> None:
         beacons = self.beacons()
-        if not self.has_credentials or not beacons:
+        if not self.has_credentials:
+            _LOGGER.debug("Vérification du firmware sautée : aucun identifiant Nordlux enregistré")
+            return
+        if not beacons:
+            _LOGGER.debug("Vérification du firmware sautée : type d'ampoule encore inconnu")
             return
         try:
             info = await (await self._api()).ota_info(beacons)
+        except CloudAuthError as err:
+            _LOGGER.warning("Identifiants Nordlux refusés (%s) : nouvelle authentification demandée", err)
+            return
         except CloudError as err:
             _LOGGER.warning("Vérification des mises à jour du firmware impossible : %s", err)
             return

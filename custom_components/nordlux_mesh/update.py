@@ -25,7 +25,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import NordluxConfigEntry
-from .cloud import CloudError
+from .cloud import CloudAuthError, CloudError
 from .const import CONF_DEVICES
 from .entity import light_device_info, light_meta
 from .fwmanager import light_beacon
@@ -185,7 +185,14 @@ class NordluxFirmwareUpdate(CoordinatorEntity, UpdateEntity):
                     except Exception:  # noqa: BLE001
                         pass
             await self._wait_back(mac, log)
-        except (OTAError, CloudError) as err:
+        except CloudAuthError as err:  # avant tout contact avec l'ampoule
+            raise HomeAssistantError(
+                "Identifiants Nordlux refusés : saisissez-les de nouveau (notification « Nouvelle "
+                "authentification requise »), puis relancez l'installation. L'ampoule n'a pas été modifiée.") from err
+        except CloudError as err:  # téléchargement : l'ampoule n'a pas encore été touchée
+            raise HomeAssistantError(
+                f"Téléchargement du firmware impossible : {err}. L'ampoule n'a pas été modifiée.") from err
+        except OTAError as err:
             raise HomeAssistantError(
                 f"Mise à jour impossible : {err}. Si l'ampoule ne se rallume pas, relancez l'installation : "
                 "elle est restée en mode mise à jour.") from err

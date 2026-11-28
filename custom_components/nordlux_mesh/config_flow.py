@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from collections.abc import Mapping
 from typing import Any
 
 import voluptuous as vol
@@ -281,6 +282,30 @@ class NordluxMeshConfigFlow(ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_DEVICES, default=defaults.get(CONF_DEVICES, "")): _MULTILINE,
         })
         return self.async_show_form(step_id="manual", data_schema=schema, errors=errors)
+
+    # --- Nouvelle authentification : identifiants refusés par le cloud (vérification du firmware)
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        entry = self._get_reauth_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            email = user_input[CONF_EMAIL].strip()
+            try:
+                api = NordluxCloud(async_get_clientsession(self.hass), clock=dt_util.now)
+                await api.login(email, user_input[CONF_PASSWORD])
+            except CloudAuthError:
+                errors["base"] = "invalid_auth"
+            except CloudError:
+                errors["base"] = "cannot_connect"
+            else:
+                # Rechargement par l'écouteur de l'entrée : nouvelle vérification une minute plus tard.
+                self.hass.config_entries.async_update_entry(
+                    entry, data={**entry.data, CONF_EMAIL: email, CONF_PASSWORD: user_input[CONF_PASSWORD]})
+                return self.async_abort(reason="reauth_successful")
+        defaults = user_input or {CONF_EMAIL: entry.data.get(CONF_EMAIL, "")}
+        return self.async_show_form(step_id="reauth_confirm", data_schema=_cloud_schema(defaults), errors=errors)
 
     @staticmethod
     @callback

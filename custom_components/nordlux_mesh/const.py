@@ -9,7 +9,7 @@ CONF_PROXIES = "proxies"
 CONF_DEVICES = "devices"
 # Informations par ampoule, indexées par « 0xNNNN » : source (cloud / ha), mac, beacon, version, pièce.
 CONF_META = "meta"
-# Assistant « compte Nordlux » : choix de la maison (l'e-mail et le mot de passe ne sont jamais enregistrés).
+# Assistant « compte Nordlux » : choix de la maison (identifiants enregistrés seulement pour le firmware).
 CONF_HOUSE = "house"
 
 # Adresse source propre à Home Assistant (le script PC utilise 0x7F01) : chaque émetteur

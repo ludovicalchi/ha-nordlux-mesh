@@ -1,6 +1,14 @@
 {
   "config": {
     "step": {
+      "reauth_confirm": {
+        "title": "Compte Nordlux",
+        "description": "Le cloud Nordlux a refusé les identifiants enregistrés (mot de passe modifié dans l'app ?). Saisissez-les de nouveau pour continuer à vérifier les mises à jour du firmware. Le pilotage des ampoules n'en dépend pas.",
+        "data": {
+          "email": "E-mail du compte Nordlux",
+          "password": "Mot de passe"
+        }
+      },
       "user": {
         "title": "Réseau mesh Nordlux Smart",
         "description": "Comment configurer le réseau mesh ?",
@@ -59,7 +67,8 @@
       "no_lights": "Aucune ampoule avec une adresse mesh sur ce compte."
     },
     "abort": {
-      "already_configured": "Ce réseau mesh est déjà configuré. Pour ajouter des ampoules, passez par les options de l'intégration."
+      "already_configured": "Ce réseau mesh est déjà configuré. Pour ajouter des ampoules, passez par les options de l'intégration.",
+      "reauth_successful": "Identifiants mis à jour. Les mises à jour du firmware seront vérifiées dans une minute environ."
     }
   },
   "options": {
