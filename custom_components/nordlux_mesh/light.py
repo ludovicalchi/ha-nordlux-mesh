@@ -4,7 +4,8 @@
   - après une commande, l'état affiché est mis à jour tout de suite (optimiste) ;
   - toutes les STATE_POLL_S secondes (et peu après le démarrage), l'état réel est relu : « present lightness »
     de Light CTL Status = luminosité en % (0 = éteinte). Les statuts Generic OnOff / Light Lightness, eux,
-    ne reflètent pas la lumière. Sans réponse, le dernier état connu est conservé ;
+    ne reflètent pas la lumière. Sans réponse isolée, le dernier état connu est conservé ; après
+    UNRESPONSIVE_AFTER lectures sans réponse, l'entité devient indisponible (comme une entité Zigbee) ;
   - l'état est aussi restauré au redémarrage.
 `assumed_state` n'est pas utilisé, pour que Home Assistant affiche un interrupteur standard.
 """
@@ -57,9 +58,9 @@ class NordluxLight(CoordinatorEntity, RestoreEntity, LightEntity):
 
     @property
     def available(self) -> bool:
-        # Une lecture manquée (proxy momentanément injoignable) ne rend pas l'ampoule indisponible :
-        # le dernier état connu est conservé et les commandes restent possibles.
-        return True
+        # Indisponible après plusieurs lectures sans réponse (comme une entité Zigbee) ; une lecture manquée
+        # isolée ne change rien.
+        return self._unicast not in ((self.coordinator.data or {}).get("unresponsive") or set())
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -73,6 +74,7 @@ class NordluxLight(CoordinatorEntity, RestoreEntity, LightEntity):
         data = self.coordinator.data or {}
         # Lecture échouée (anciennes données) ou commencée avant notre dernière commande : on l'ignore.
         if not self.coordinator.last_update_success or data.get("read_at", 0) < self._last_command:
+            self.async_write_ha_state()  # la disponibilité peut quand même avoir changé
             return
         pct = data.get("lightness", {}).get(self._unicast)
         if pct is not None:

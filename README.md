@@ -2,14 +2,17 @@
 
 Intégration Home Assistant pour piloter **localement**, sans le cloud Nordlux, les ampoules **Nordlux Smart Light** en Bluetooth Mesh (puce Phyplus PHY6222).
 
-> **Statut : 0.8.1, testée** le 27/11/2026 dans Home Assistant, sur une Candle DIM :
+> **Statut : 0.9.0** : une ampoule injoignable devient « Indisponible », au lieu de l'alerte « ne répond plus » ; l'alerte « Aucun proxy Bluetooth disponible » est conservée. Pas encore testée dans Home Assistant.
+>
+> **0.8.2** : alertes testées dans Home Assistant (ampoule coupée à l'interrupteur, perte du proxy).
+>
+> **0.8.1, testée** le 27/11/2026 dans Home Assistant, sur une Candle DIM :
 > - **Fiche de l'appareil :** modèle Candle DIM (`nx00626222`), firmware 27.3 et adresse Bluetooth.
 > - **Capteurs de diagnostic :**
 >   - Signal Bluetooth, en dBm, avec le proxy qui reçoit l'ampoule ;
 >   - Dernière réponse ;
 >   - Origine, avec le modèle et la plage de température de couleur, complétés depuis les annonces de l'ampoule.
 >
-> Les alertes dans Réparations (ampoule qui ne répond plus, aucun proxy joignable), ajoutées en 0.8.0, n'ont pas encore été testées.
 >
 > **0.7.1, testée** le 27/11/2026 : lecture de l'état toutes les 2 minutes, au lieu de 5.
 > - Un écart entre l'affichage de Home Assistant (20 %) et l'ampoule (44 %) a été corrigé automatiquement à la lecture suivante.
@@ -178,7 +181,8 @@ Ensuite, les ampoules s'ajoutent et se suppriment comme décrit plus haut. Il n'
   - Vérifié sur une Candle DIM : 0 éteinte, la valeur envoyée une fois allumée, et la même valeur après une coupure de courant à l'interrupteur.
   - Les statuts standard Generic OnOff et Light Lightness, eux, ne reflètent pas la lumière.
   - Après une commande, l'affichage change aussitôt, puis la lecture suivante le confirme ou le corrige.
-  - Si l'ampoule ne répond pas, le dernier état connu est conservé.
+  - Si l'ampoule ne répond pas à une lecture isolée, le dernier état connu est conservé.
+  - L'entité s'affiche avec un interrupteur standard.
 - **Fiche de l'appareil** :
   - **Modèle** : nom du catalogue de l'app, par exemple « Candle DIM », avec son type `nx00626222`.
   - **Firmware et adresse Bluetooth** : lus dans les annonces de l'ampoule, sans connexion, et tenus à jour.
@@ -192,11 +196,11 @@ Ensuite, les ampoules s'ajoutent et se suppriment comme décrit plus haut. Il n'
     - « Inconnue » : saisie manuelle.
 
     Ses attributs donnent l'adresse mesh, la plage de température de couleur du modèle, et le firmware et la pièce connus à l'enregistrement.
-- **Alertes (Paramètres → Réparations)** :
-  - **« L'ampoule … ne répond plus »** : 3 lectures de suite sans réponse, soit environ 6 minutes. L'ampoule est hors tension, hors de portée, ou a été réinitialisée ou ajoutée ailleurs. Cela vaut aussi quand l'ampoule éteinte était le seul proxy mesh joignable.
-  - **« Aucun proxy Bluetooth disponible »** : Home Assistant n'a plus aucun adaptateur ni proxy Bluetooth connectable depuis 3 lectures. Le proxy ESPHome est probablement débranché ou déconnecté.
-  - Les alertes disparaissent dès la première réponse, et ne sont pas conservées au redémarrage : elles réapparaissent si le problème persiste.
-  - L'entité s'affiche avec un interrupteur standard.
+- **Ampoule injoignable** : après 3 lectures de suite sans réponse, soit environ 6 minutes, l'ampoule devient **« Indisponible »**, comme une entité Zigbee. Elle redevient disponible à la première réponse.
+  - Causes possibles : hors tension, hors de portée, ou réinitialisée ou ajoutée ailleurs.
+  - Cela vaut aussi quand l'ampoule éteinte était le seul proxy mesh joignable.
+  - Le capteur « Dernière réponse » indique depuis quand elle ne répond plus.
+- **Alerte (Paramètres → Réparations) « Aucun proxy Bluetooth disponible »** : Home Assistant n'a plus aucun adaptateur ni proxy Bluetooth connectable depuis 3 lectures (proxy ESPHome débranché ou déconnecté). Les ampoules deviennent alors aussi indisponibles. L'alerte disparaît dès qu'une lecture réussit, et n'est pas conservée au redémarrage.
 - **Anti-rejeu** : chaque message mesh porte un numéro de séquence qui ne doit jamais être réutilisé pour une même adresse source. L'intégration le réserve par blocs et l'enregistre dans le stockage de Home Assistant. Le prochain numéro reprend toujours au-delà du dernier bloc réservé, y compris après un redémarrage. N'utilisez pas la même adresse source dans un autre outil.
 - La connexion au proxy est ouverte à la demande et fermée après 30 s d'inactivité, pour ne pas occuper durablement les connexions limitées d'un proxy ESPHome.
 - Le bridge Nordlux peut rester allumé : il n'annule pas les commandes locales.

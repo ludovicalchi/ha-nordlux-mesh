@@ -11,7 +11,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from homeassistant.util import dt as dt_util
 
@@ -71,8 +71,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> b
         names = {u: n for n, u in parse_devices(entry_value(entry, CONF_DEVICES, ""))}
     except ValueError:
         names = {}
-    # Alertes d'ampoules qui ne sont plus dans la liste : effacées.
-    async_clear_issues(hass, entry.entry_id, keep=set(names))
+    async_clear_issues(hass, entry.entry_id)
     tracker = ResponseTracker(hass, entry)
 
     # Lecture périodique de l'état réel (Light CTL Get) de toutes les ampoules, sur une seule connexion.
@@ -80,20 +79,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: NordluxConfigEntry) -> b
         # read_at : début de la lecture ; une entité ignore une lecture commencée avant sa dernière commande.
         read_at = time.monotonic()
         if not names:
-            return {"read_at": read_at, "lightness": {}, "adv": {}, "seen": {}}
+            return {"read_at": read_at, "lightness": {}, "adv": {}, "seen": {}, "unresponsive": set()}
         try:
             result = await hub.async_read_lightness(list(names))
         except Exception as err:  # noqa: BLE001
-            tracker.poll_failed(names, err, bluetooth.async_scanner_count(hass, connectable=True) > 0)
-            raise UpdateFailed(f"lecture de l'état impossible : {err}") from err
-        tracker.poll_ok(names, result)
+            tracker.poll_failed(list(names), err, bluetooth.async_scanner_count(hass, connectable=True) > 0)
+            # Pas d'UpdateFailed : les entités doivent recevoir la liste des ampoules devenues indisponibles.
+            _LOGGER.debug("Lecture de l'état impossible : %s", err)
+            return {"read_at": read_at, "lightness": {}, "adv": {}, "seen": dict(hub.last_seen),
+                    "unresponsive": tracker.unresponsive()}
+        tracker.poll_ok(result)
         now = dt_util.utcnow()
         for unicast, value in result.items():
             if value is not None:
                 hub.last_seen[unicast] = now
         adv = {u: a for u, a in adv_info(hass).items() if u in names}
         _async_update_devices(hass, entry, adv)
-        return {"read_at": read_at, "lightness": result, "adv": adv, "seen": dict(hub.last_seen)}
+        return {"read_at": read_at, "lightness": result, "adv": adv, "seen": dict(hub.last_seen),
+                "unresponsive": tracker.unresponsive()}
 
     hub.coordinator = DataUpdateCoordinator(
         hass, _LOGGER, config_entry=entry, name=f"{DOMAIN} état",

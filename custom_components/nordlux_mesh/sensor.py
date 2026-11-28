@@ -64,7 +64,8 @@ class NordluxSignalSensor(CoordinatorEntity, _Base):
 
     @property
     def available(self) -> bool:
-        return self._attr_native_value is not None
+        unresponsive = (self.coordinator.data or {}).get("unresponsive") or set()
+        return self._attr_native_value is not None and self._unicast not in unresponsive
 
 
 class NordluxLastResponseSensor(CoordinatorEntity, _Base):
