@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -22,7 +23,6 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.dt import monotonic_time_coarse
 
 from . import NordluxConfigEntry
 from .cloud import CloudError
@@ -116,7 +116,8 @@ class NordluxFirmwareUpdate(CoordinatorEntity, UpdateEntity):
     def _fresh_device(self, address: str):
         """Appareil connectable vu récemment (les annonces anciennes restent en cache dans HA)."""
         si = bluetooth.async_last_service_info(self.hass, address, connectable=True)
-        if si is None or monotonic_time_coarse() - si.time > FRESH_S:
+        # si.time : horloge monotone (grossière) de habluetooth, même base que time.monotonic() sous Linux.
+        if si is None or time.monotonic() - si.time > FRESH_S:
             return None
         return si.device
 
